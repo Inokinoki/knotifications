@@ -39,6 +39,11 @@ if (ANDROID)
     list(APPEND knotifications_SRCS notifybyandroid.cpp knotifications.qrc)
 endif()
 
+# if (WIN32)
+#    add_subdirectory(snore-ftw)
+#    list(APPEND knotifications_SRCS snoretoast.cpp)
+#endif (WIN32)
+
 ecm_qt_declare_logging_category(knotifications_SRCS HEADER debug_p.h IDENTIFIER LOG_KNOTIFICATIONS CATEGORY_NAME org.kde.knotifications)
 
 if (Canberra_FOUND)
