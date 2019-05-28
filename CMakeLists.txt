@@ -35,11 +35,11 @@ set(REQUIRED_QT_VERSION 5.10.0)
 set(CMAKE_AUTORCC TRUE)
 
 find_package(Qt5 ${REQUIRED_QT_VERSION} CONFIG REQUIRED Widgets)
-if (NOT ANDROID)
-    find_package(Qt5 ${REQUIRED_QT_VERSION} CONFIG REQUIRED DBus)
-else ()
+if (ANDROID)
     find_package(Qt5 ${REQUIRED_QT_VERSION} CONFIG REQUIRED AndroidExtras)
     find_package(Gradle REQUIRED)
+else ()
+    find_package(Qt5 ${REQUIRED_QT_VERSION} CONFIG REQUIRED DBus)
 endif()
 find_package(Qt5 ${REQUIRED_QT_VERSION} QUIET OPTIONAL_COMPONENTS TextToSpeech)
 set_package_properties(Qt5TextToSpeech PROPERTIES
@@ -72,27 +72,26 @@ find_package(KF5Config ${KF5_DEP_VERSION} REQUIRED)
 find_package(KF5Codecs ${KF5_DEP_VERSION} REQUIRED)
 find_package(KF5CoreAddons ${KF5_DEP_VERSION} REQUIRED)
 
-find_package(Canberra)
-set_package_properties(Canberra PROPERTIES DESCRIPTION "Library for generating event sounds"
-    PURPOSE "Needed to build audio notification support"
-    URL "http://0pointer.de/lennart/projects/libcanberra"
-    TYPE OPTIONAL)
-if (Canberra_FOUND)
-    add_definitions(-DHAVE_CANBERRA)
-else()
-    find_package(Phonon4Qt5 4.6.60 NO_MODULE)
-    set_package_properties(Phonon4Qt5 PROPERTIES
-        DESCRIPTION "Qt-based audio library"
-        PURPOSE "Needed to build audio notification support when Canberra isn't available")
-    if (NOT ANDROID)
+if (NOT ANDROID)
+    find_package(Canberra)
+    set_package_properties(Canberra PROPERTIES DESCRIPTION "Library for generating event sounds"
+        PURPOSE "Needed to build audio notification support"
+        URL "http://0pointer.de/lennart/projects/libcanberra"
+        TYPE OPTIONAL)
+    if (Canberra_FOUND)
+        add_definitions(-DHAVE_CANBERRA)
+    else ()
+        find_package(Phonon4Qt5 4.6.60 NO_MODULE)
+        set_package_properties(Phonon4Qt5 PROPERTIES
+            DESCRIPTION "Qt-based audio library"
+            PURPOSE "Needed to build audio notification support when Canberra isn't available")
         # This is REQUIRED since you cannot tell CMake "either one of those two optional ones are required"
         set_package_properties(Phonon4Qt5 PROPERTIES TYPE REQUIRED)
-    endif()
-    if (Phonon4Qt5_FOUND)
-        add_definitions(-DHAVE_PHONON4QT5)
+        if (Phonon4Qt5_FOUND)
+            add_definitions(-DHAVE_PHONON4QT5)
+        endif()
     endif()
 endif()
-
 remove_definitions(-DQT_NO_CAST_FROM_BYTEARRAY)
 #add_definitions(-DQT_NO_FOREACH)
 if (IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/po")
