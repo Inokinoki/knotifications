@@ -35,14 +35,19 @@ if (TARGET Qt5::DBus)
 endif()
 
 if (ANDROID)
-    add_subdirectory(android)
-    list(APPEND knotifications_SRCS notifybyandroid.cpp knotifications.qrc)
+  add_subdirectory(android)
+  list(APPEND knotifications_SRCS notifybyandroid.cpp knotifications.qrc)
 endif()
 
-# if (WIN32)
-#    add_subdirectory(snore-ftw)
-#    list(APPEND knotifications_SRCS snoretoast.cpp)
-#endif (WIN32)
+# so the main stuff to handle now is -- 1. SnoreToast folder
+#                                    -- 2. notifybysnore.cpp
+
+#if (WIN32)
+#  if (MSVC)
+#    add_subdirectory(snoretoast)
+#    list(APPEND knotifications_SRCS notifybysnore.cpp)
+#  endif ()
+#endif ()
 
 ecm_qt_declare_logging_category(knotifications_SRCS HEADER debug_p.h IDENTIFIER LOG_KNOTIFICATIONS CATEGORY_NAME org.kde.knotifications)
 
