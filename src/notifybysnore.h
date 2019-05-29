@@ -21,11 +21,14 @@
 #include "knotificationplugin.h"
 
 #include <QPointer>
+#include <QProcess>
+#include <QString>
 
 /** Windows notification backend - inspired by Android notification backend. */
 class NotifyBySnore : public KNotificationPlugin
 {
     Q_OBJECT
+
 public:
     explicit NotifyBySnore(QObject *parent = nullptr);
     ~NotifyBySnore() override;
@@ -34,9 +37,13 @@ public:
     void notify(KNotification *notification, KNotifyConfig *config) override;
     void close(KNotification * notification) override;
     void update(KNotification *notification, KNotifyConfig *config) override;
+    void notificationActionInvoked(int id, int action);
+    void installShortcut(QString& appName, QString& appLocation, QString& appID);
 private:
     QHash<int, QPointer<KNotification>> m_notifications;
-// do I need something to point to the exe ???
+    QString program;
+    QStringList arguments;
+    QProcess *myProcess;
 };
 
 #endif // NOTIFYBYSNORE_H
