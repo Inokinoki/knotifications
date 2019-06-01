@@ -39,16 +39,18 @@ if (ANDROID)
   list(APPEND knotifications_SRCS notifybyandroid.cpp knotifications.qrc)
 endif()
 
-# so the main stuff to handle now is -- 1. SnoreToast folder
-#                                    -- 2. notifybysnore.cpp
+# so the main stuff to handle now is   -- 2. notifybysnore.cpp
 
 if (WIN32)
   if (MSVC)
-#  find_package(SnoreToast REQUIRED)
-#    set_package_properties(LibsnoreQt5 PROPERTIES TYPE OPTIONAL
+#  find_package(snoretoast REQUIRED)
+#    set_package_properties(snoretoast PROPERTIES TYPE OPTIONAL
 #        DESCRIPTION "a cross-platform notification framework"
 #    )
-    list(APPEND knotifications_SRCS notifybysnore.cpp)
+  if (Qt5Network_FOUND)
+    target_link_libraries(KF5Notifications PUBLIC Qt5::Network)
+  endif()    
+  list(APPEND knotifications_SRCS notifybysnore.cpp)
   endif ()
 endif ()
 

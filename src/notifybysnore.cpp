@@ -28,22 +28,33 @@
 #include <QProcess>
 #include <QString>
 #include <QDir>
+#include <QTemporaryFile>
+#include <QLoggingCategory>
+Q_LOGGING_CATEGORY(SNORETOAST, "SNORETOAST")
+// #include <QLocalServer>
+// #include <QLocalSocket>
+#include <QDebug>
+#include <QProcess>
+#include <QTimer>
 
+#include <iostream>
+
+#include "snoretoastactions.h"
 
 static NotifyBySnore *s_instance = nullptr;
+
 // RUN THIS BEFORE TRYING OR THE NOTIFS WON'T SHOW!
 // .\SnoreToast.exe -install "KDE Connect" "C:\CraftRoot\bin\kdeconnectd.exe" "org.kde.connect"
 
-//gotta get more inspirations from notifybyportal, eg: PixMap rendering in notifs
+//gotta get more inspirations from notifybyportal
 // installing the Shortcut
+
 
 NotifyBySnore::NotifyBySnore(QObject* parent) :
     KNotificationPlugin(parent)
 {
     s_instance = this;
     program = QStringLiteral("SnoreToast.exe");
-    // TODO expose the function for Win32 based apps
-// installShortcut(QStringLiteral("KDE Connect"),QString(QDir::currentPath()+QStringLiteral("/kdeconnectd.exe")), QStringLiteral("org.kde.connect"));
     // Sleep(uint(4000));
 
 }
@@ -53,59 +64,58 @@ NotifyBySnore::~NotifyBySnore()
     s_instance = nullptr;
 }
 
-void NotifyBySnore::installShortcut(QString& appName, QString& appLocation, QString& appID)
-{
-    myProcess = new QProcess();
-    myProcess->start(program, arguments);
-    QStringList arguments;
-// -install <name> <application> <appID>| Creates a shortcut <name> in the start menu which point to the executable <application>, appID used for the notifications.
-    arguments << QStringLiteral("-install") << appName << appLocation << appID;
-
-    if(myProcess->waitForStarted(5000))
-    {   
-        // qDebug() << out_string.toStdString().c_str();
-        qDebug() << "SnoreToast called for Shortcut installation.";
-    }
-    else
-    {
-        qDebug() << "SnoreToast did not start in time for Notif-Show";
-    }
-}
-
 void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
 {
 
-    myProcess = new QProcess();
+    auto proc = new QProcess();
     QStringList arguments;
-    
+    QTemporaryFile iconFile;
     // image loading now! we read from the pixmap sent through KDE Connect 
     // and save it to a file temporarily, then delete the icon once the notif is rendered
 
     if (!notification->pixmap().isNull()) {
-        QFile file( notification->eventId() );
-        file.open(QIODevice::WriteOnly);
-        notification->pixmap().save(&file, "PNG");
-        file.close();
+        if (iconFile.open()) {
+            notification->pixmap().save(&iconFile, "PNG");
+        }
     }
+
+
+
+
+
+
+
+
+
 
     arguments << QStringLiteral("-t") << notification->title();
     arguments << QStringLiteral("-m") << notification->text();
-    arguments << QStringLiteral("-p") <<  notification->eventId() ;
+    arguments << QStringLiteral("-p") <<  iconFile.fileName() ;
     arguments << QStringLiteral("-appID") << QStringLiteral("org.kde.connect");
+    arguments << QStringLiteral("-id") << (QString) notification->id();
+    // arguments << QStringLiteral("-b") << QStringLiteral("Close;Button2");
+    arguments << QStringLiteral("-w");
+    proc->start(program, arguments);
+    proc->connect(proc, QOverload<int>::of(&QProcess::finished), proc, [proc] {
+    qCDebug(SNORETOAST) <<  qUtf8Printable(proc->readAll()) << std::endl;
 
-    myProcess->start(program, arguments);
-    if(myProcess->waitForStarted(5000))
+    // qCDebug(SNORETOAST) << proc->exitCode() << std::endl;
+    });
+
+
+
+
+
+    // proc->start(program, arguments);
+    if(proc->waitForStarted(5000))
     {
-        Sleep(1000);
         qDebug() << "SnoreToast called for Notif-show.";
-        QFile rem_file( notification->eventId() );
-        rem_file.remove();
+        arguments.clear();
     }
     else
     {
         qDebug() << "SnoreToast did not start in time for Notif-Show";
     }
-
 }
 /* 
 basically, we have every notifiaction packaged as a JSON-ish object. 
@@ -124,11 +134,18 @@ aaaand we should be done :)
 
 void NotifyBySnore::close(KNotification* notification)
 {
-    // KNotificationPlugin::close(notification);
+    auto proc = new QProcess();
+    QStringList arguments;
+    arguments << QStringLiteral("-close") << (QString) notification->id();
+    proc->start(program, arguments);
+    arguments.clear();
+    KNotificationPlugin::close(notification);
 }
 
 void NotifyBySnore::update(KNotification *notification, KNotifyConfig *config)
 {
+    close(notification);
+    notify(notification, config);
 }
 
 void NotifyBySnore::notificationActionInvoked(int id, int action)
