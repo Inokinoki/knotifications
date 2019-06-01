@@ -30,16 +30,10 @@
 #include <QDir>
 #include <QTemporaryFile>
 #include <QLoggingCategory>
-// Q_LOGGING_CATEGORY(SNORETOAST, "SNORETOAST")
-// #include <QLocalServer>
-// #include <QLocalSocket>
-#include <QDebug>
-#include <QProcess>
-#include <QTimer>
+#include <QLocalServer>
+#include <QLocalSocket>
 
-#include <iostream>
-
-#include "snoretoastactions.h"
+#include <snoretoastactions.h>
 
 static NotifyBySnore *s_instance = nullptr;
 
@@ -84,9 +78,38 @@ void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
         }
     }
 
+    // ACTION! 
+int id = notification->id();
+    QObject::connect(server, &QLocalServer::newConnection, server, [this,id]() {
+    
+    
+    auto sock = server->nextPendingConnection();
+    sock->waitForReadyRead();
+    const QByteArray rawData = sock->readAll();
+    const QString data =
+            QString::fromWCharArray(reinterpret_cast<const wchar_t *>(rawData.constData()),
+                                    rawData.size() / sizeof(wchar_t));
+    QMap<QString, QString> map;
+    for (const auto &str : data.split(QStringLiteral(";"))) {
+        const auto index = str.indexOf(QStringLiteral("="));
+        map[str.mid(0, index)] = str.mid(index + 1);
+    }
+    const auto action = map[QStringLiteral("action")];
+    const auto snoreAction = SnoreToastActions::getAction(action.toStdWString());
+
+    // std::wcout << "Action: " << qPrintable(action) << " " << static_cast<int>(snoreAction)
+    //             << std::endl;
+
+    qDebug() << "THE ID IS : " << id << "AND THE ACTION IS : " << action;
+    NotifyBySnore::notificationActionInvoked(id, static_cast<int>(snoreAction));
+});
+    server->listen(QStringLiteral("foo"));
+ 
+
     arguments << QStringLiteral("-t") << notification->title();
     arguments << QStringLiteral("-m") << notification->text()+QString::number(notification->id());
-    arguments << QStringLiteral("-p") <<  iconFile.fileName() ;
+    arguments << QStringLiteral("-p") <<  iconFile.fileName();
+    arguments << QStringLiteral("-pipename") << server->fullServerName();
     arguments << QStringLiteral("-appID") << QStringLiteral("org.kde.connect");
     arguments << QStringLiteral("-id") << QString::number(notification->id());
     // arguments << QStringLiteral("-b") << QStringLiteral("Close;Button2");
@@ -96,17 +119,19 @@ void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
 
     proc->start(program, arguments);
 
+
     Sleep(5000); // !HACK! for the notifications to pick up the image icon
 
     if(proc->waitForStarted(5000))
     {
         qDebug() << "SnoreToast called for Notif-show by ID: "<< notification->id();
-        arguments.clear();
     }
     else
     {
         qDebug() << "SnoreToast did not start in time for Notif-Show";
     }
+   proc->waitForFinished();
+
 }
 
 /* 

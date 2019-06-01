@@ -47,9 +47,8 @@ if (WIN32)
         PURPOSE     "Enable support for the snorenotify framework"
         DESCRIPTION "a cross-platform notification framework"
     )
-  if (Qt5Network_FOUND)
-    target_link_libraries(KF5Notifications PUBLIC Qt5::Network)
-  endif()    
+  find_package(Qt5Core REQUIRED)
+  find_package(Qt5Network REQUIRED)
   list(APPEND knotifications_SRCS notifybysnore.cpp)
   endif ()
 endif ()
@@ -112,6 +111,9 @@ target_link_libraries(KF5Notifications PRIVATE
    KF5::WindowSystem
    KF5::Codecs
 )
+if (MSVC)
+target_link_libraries(KF5Notifications PUBLIC Qt5::Core Qt5::Network SnoreToast::SnoreToastActions)
+endif ()
 
 if (Phonon4Qt5_FOUND)
     target_link_libraries(KF5Notifications PRIVATE

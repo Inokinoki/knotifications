@@ -21,6 +21,8 @@
 #include "knotificationplugin.h"
 
 #include <QPointer>
+#include <QLocalServer>
+#include <QLocalSocket>
 #include <QProcess>
 #include <QString>
 
@@ -38,11 +40,11 @@ public:
     void close(KNotification * notification) override;
     void update(KNotification *notification, KNotifyConfig *config) override;
     void notificationActionInvoked(int id, int action);
-    // void installShortcut(QString& appName, QString& appLocation, QString& appID);
 private:
     QHash<int, QPointer<KNotification>> m_notifications;
     QString program;
     QProcess *proc;
+    QLocalServer *server = new QLocalServer();
 };
 
 #endif // NOTIFYBYSNORE_H
