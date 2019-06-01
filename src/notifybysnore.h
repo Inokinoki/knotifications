@@ -42,9 +42,7 @@ public:
 private:
     QHash<int, QPointer<KNotification>> m_notifications;
     QString program;
-    // QStringList arguments;
-    // QProcess *proc;
-    
+    QProcess *proc;
 };
 
 #endif // NOTIFYBYSNORE_H

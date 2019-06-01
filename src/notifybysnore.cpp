@@ -30,7 +30,7 @@
 #include <QDir>
 #include <QTemporaryFile>
 #include <QLoggingCategory>
-Q_LOGGING_CATEGORY(SNORETOAST, "SNORETOAST")
+// Q_LOGGING_CATEGORY(SNORETOAST, "SNORETOAST")
 // #include <QLocalServer>
 // #include <QLocalSocket>
 #include <QDebug>
@@ -66,11 +66,16 @@ NotifyBySnore::~NotifyBySnore()
 
 void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
 {
+    if (m_notifications.find(notification->id()) != m_notifications.end() || notification->id() == -1) {
+            qDebug() << "AHAA ! Duplicate for ID: " << notification->id() << " caught!";
+            return;
+        }
 
-    auto proc = new QProcess();
-    QStringList arguments;
+    proc = new QProcess();
     QTemporaryFile iconFile;
-    // image loading now! we read from the pixmap sent through KDE Connect 
+    QStringList arguments;
+
+    // we read from the pixmap sent through KDE Connect 
     // and save it to a file temporarily, then delete the icon once the notif is rendered
 
     if (!notification->pixmap().isNull()) {
@@ -79,37 +84,23 @@ void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
         }
     }
 
-
-
-
-
-
-
-
-
-
     arguments << QStringLiteral("-t") << notification->title();
-    arguments << QStringLiteral("-m") << notification->text();
+    arguments << QStringLiteral("-m") << notification->text()+QString::number(notification->id());
     arguments << QStringLiteral("-p") <<  iconFile.fileName() ;
     arguments << QStringLiteral("-appID") << QStringLiteral("org.kde.connect");
-    arguments << QStringLiteral("-id") << (QString) notification->id();
+    arguments << QStringLiteral("-id") << QString::number(notification->id());
     // arguments << QStringLiteral("-b") << QStringLiteral("Close;Button2");
     arguments << QStringLiteral("-w");
+
+    m_notifications.insert(notification->id(), notification);
+
     proc->start(program, arguments);
-    proc->connect(proc, QOverload<int>::of(&QProcess::finished), proc, [proc] {
-    qCDebug(SNORETOAST) <<  qUtf8Printable(proc->readAll()) << std::endl;
 
-    // qCDebug(SNORETOAST) << proc->exitCode() << std::endl;
-    });
+    Sleep(5000); // !HACK! for the notifications to pick up the image icon
 
-
-
-
-
-    // proc->start(program, arguments);
     if(proc->waitForStarted(5000))
     {
-        qDebug() << "SnoreToast called for Notif-show.";
+        qDebug() << "SnoreToast called for Notif-show by ID: "<< notification->id();
         arguments.clear();
     }
     else
@@ -117,29 +108,37 @@ void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
         qDebug() << "SnoreToast did not start in time for Notif-Show";
     }
 }
+
 /* 
-basically, we have every notifiaction packaged as a JSON-ish object. 
-Need to look into what's this "id" thingy.
 Then we also have a config 
     Not sure what's that, but we surely get this from notifs in KDEConnect.
 Here in this plugin we gotta define our own 
-    notify
-    close
     notificationFinished
     notificationActionInvoked
 
 aaaand we should be done :)
 */
 
-
+// LIMITATION : notifs won't get closed auto-ly if you open Action Center, read them, and then close it back.
 void NotifyBySnore::close(KNotification* notification)
 {
-    auto proc = new QProcess();
+    const auto it = m_notifications.find(notification->id());
+    if (it == m_notifications.end()) {
+        return;
+    }
+
+    qDebug() << "SnoreToast called for closing notif by ID: "<< notification->id();
+
+    proc = new QProcess();
     QStringList arguments;
-    arguments << QStringLiteral("-close") << (QString) notification->id();
+    arguments << QStringLiteral("-close") << QString::number(notification->id());
     proc->start(program, arguments);
     arguments.clear();
-    KNotificationPlugin::close(notification);
+
+    m_notifications.erase(it);
+    if (it.value()) {
+        finish(it.value());
+    }
 }
 
 void NotifyBySnore::update(KNotification *notification, KNotifyConfig *config)
