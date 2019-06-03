@@ -112,7 +112,7 @@ target_link_libraries(KF5Notifications PRIVATE
    KF5::Codecs
 )
 if (MSVC)
-target_link_libraries(KF5Notifications PUBLIC Qt5::Core Qt5::Network SnoreToast::SnoreToastActions)
+target_link_libraries(KF5Notifications PRIVATE Qt5::Core Qt5::Network SnoreToast::SnoreToastActions)
 endif ()
 
 if (Phonon4Qt5_FOUND)

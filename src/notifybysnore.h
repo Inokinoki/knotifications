@@ -45,6 +45,7 @@ private:
     QString program;
     QProcess *proc;
     QLocalServer *server = new QLocalServer();
+     
 };
 
 #endif // NOTIFYBYSNORE_H

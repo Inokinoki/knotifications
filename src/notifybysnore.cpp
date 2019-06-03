@@ -41,7 +41,7 @@ static NotifyBySnore *s_instance = nullptr;
 // .\SnoreToast.exe -install "KDE Connect" "C:\CraftRoot\bin\kdeconnectd.exe" "org.kde.connect"
 
 //gotta get more inspirations from notifybyportal
-// installing the Shortcut
+// installing the Shortcut - TODO by NSIS Installer
 
 
 NotifyBySnore::NotifyBySnore(QObject* parent) :
@@ -49,6 +49,8 @@ NotifyBySnore::NotifyBySnore(QObject* parent) :
 {
     s_instance = this;
     program = QStringLiteral("SnoreToast.exe");
+    server->listen(QStringLiteral("foo"));
+
     // Sleep(uint(4000));
 
 }
@@ -79,10 +81,8 @@ void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
     }
 
     // ACTION! 
-int id = notification->id();
+    int id = notification->id();
     QObject::connect(server, &QLocalServer::newConnection, server, [this,id]() {
-    
-    
     auto sock = server->nextPendingConnection();
     sock->waitForReadyRead();
     const QByteArray rawData = sock->readAll();
@@ -101,10 +101,9 @@ int id = notification->id();
     //             << std::endl;
 
     qDebug() << "THE ID IS : " << id << "AND THE ACTION IS : " << action;
-    NotifyBySnore::notificationActionInvoked(id, static_cast<int>(snoreAction));
+    NotifyBySnore::notificationActionInvoked(id, (int)snoreAction);
 });
-    server->listen(QStringLiteral("foo"));
- 
+    
 
     arguments << QStringLiteral("-t") << notification->title();
     arguments << QStringLiteral("-m") << notification->text()+QString::number(notification->id());
@@ -130,8 +129,6 @@ int id = notification->id();
     {
         qDebug() << "SnoreToast did not start in time for Notif-Show";
     }
-   proc->waitForFinished();
-
 }
 
 /* 
@@ -174,6 +171,6 @@ void NotifyBySnore::update(KNotification *notification, KNotifyConfig *config)
 
 void NotifyBySnore::notificationActionInvoked(int id, int action)
 {
-    qCDebug(LOG_KNOTIFICATIONS) << id << action;
+    // qCDebug(LOG_KNOTIFICATIONS) << id << action;
     emit actionInvoked(id, action);
 }
