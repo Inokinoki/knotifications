@@ -25,6 +25,8 @@
 #include <QLocalSocket>
 #include <QProcess>
 #include <QString>
+#include <QTemporaryDir>
+
 
 /** Windows notification backend - inspired by Android notification backend. */
 class NotifyBySnore : public KNotificationPlugin
@@ -42,10 +44,11 @@ public:
     void notificationActionInvoked(int id, int action);
 private:
     QHash<int, QPointer<KNotification>> m_notifications;
-    QString program;
+    QString program = QStringLiteral("SnoreToast.exe");
     QProcess *proc;
-    QLocalServer *server = new QLocalServer();
-     
+    // QLocalServer *server;
+    QTemporaryDir *iconDir;
+    QCoreApplication *app;
 };
 
 #endif // NOTIFYBYSNORE_H
