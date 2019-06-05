@@ -72,7 +72,7 @@ find_package(KF5Config ${KF5_DEP_VERSION} REQUIRED)
 find_package(KF5Codecs ${KF5_DEP_VERSION} REQUIRED)
 find_package(KF5CoreAddons ${KF5_DEP_VERSION} REQUIRED)
 
-if (NOT ANDROID)
+if (NOT ANDROID AND NOT WIN32)
     find_package(Canberra)
     set_package_properties(Canberra PROPERTIES DESCRIPTION "Library for generating event sounds"
         PURPOSE "Needed to build audio notification support"
