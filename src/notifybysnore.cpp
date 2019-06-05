@@ -77,7 +77,6 @@ void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
     arguments << QStringLiteral("-p") <<  file.fileName();
     arguments << QStringLiteral("-appID") << app->applicationName(); 
     arguments << QStringLiteral("-id") << QString::number(notification->id());
-    arguments << QStringLiteral("-w");
     m_notifications.insert(notification->id(), notification);
     proc->start(program, arguments);
     if(proc->waitForStarted(1000))
