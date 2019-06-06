@@ -69,7 +69,7 @@ NotifyBySnore::NotifyBySnore(QObject* parent) :
         const auto snoreAction = SnoreToastActions::getAction(action.toStdWString());
         qDebug() << "THE ID IS : " << QString::number(ID) << "AND THE INTERACTION WAS : " << QString::number(static_cast<int>(snoreAction)) <<" : "<< action;
         const auto button = map[QStringLiteral("button")];
-        if(!button.isEmpty()){
+        if(!action.compare(QStringLiteral("buttonClicked"))){
             qDebug() << "AND THE BUTTON CLICKED IS : " << button;
             QStringList s = m_notifications.value(ID)->actions();
             int action_no = s.indexOf(button) + 1;
@@ -98,7 +98,7 @@ void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
 }
     
     arguments << QStringLiteral("-t") << notification->title();
-    arguments << QStringLiteral("-m") << notification->text()+QString::number(notification->id());
+    arguments << QStringLiteral("-m") << notification->text();
     arguments << QStringLiteral("-p") <<  file.fileName();
     arguments << QStringLiteral("-appID") << app->applicationName();
     arguments << QStringLiteral("-id") << QString::number(notification->id());
