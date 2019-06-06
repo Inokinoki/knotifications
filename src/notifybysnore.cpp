@@ -90,7 +90,7 @@ NotifyBySnore::NotifyBySnore(QObject* parent) :
                                     qDebug() << " User clicked a button on the toast.";
                                     const auto button = map[QStringLiteral("button")];
                                     QStringList s = m_notifications.value(ID)->actions();
-                                    int action_no = s.indexOf(button) + 1; // QStringList starts with 0 but not actions
+                                    int action_no = s.indexOf(button) + 1; // QStringList starts with index 0 but not actions
                                     NotifyBySnore::notificationActionInvoked(ID, action_no);
                                     break;
             }
