@@ -113,7 +113,7 @@ NotifyBySnore::~NotifyBySnore()
 
 void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
 {
-    if (m_notifications.find(notification->id()) != m_notifications.end()) {
+    if (m_notifications.find(notification->id()) != m_notifications.end() || notification->id() == -1) {
             qDebug() << "AHAA ! Duplicate for ID: " << notification->id() << " caught!";
             return;
         }
