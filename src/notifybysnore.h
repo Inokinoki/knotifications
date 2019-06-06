@@ -45,7 +45,7 @@ public:
 private:
     QHash<int, QPointer<KNotification>> m_notifications;
     QString program = QStringLiteral("SnoreToast.exe");
-    QProcess *proc;
+    // QProcess *proc;
     QLocalServer *server;
     QTemporaryDir *iconDir;
     QCoreApplication *app;

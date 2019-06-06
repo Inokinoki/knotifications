@@ -63,7 +63,7 @@ void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
             qDebug() << "AHAA ! Duplicate for ID: " << notification->id() << " caught!";
             return;
         }
-    proc = new QProcess();
+    QProcess *proc = new QProcess();
 
     QStringList arguments;
     QFile file(iconDir->path() + QString::number(notification->id()));
@@ -71,26 +71,26 @@ void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
             notification->pixmap().save(&file, "PNG");
 }
 
-    ACTION! 
-    QObject::connect(server, &QLocalServer::newConnection, server, [this,notification]() {
-    auto sock = server->nextPendingConnection();
-    sock->waitForReadyRead();
-    const QByteArray rawData = sock->readAll();
-    const QString data =
-            QString::fromWCharArray(reinterpret_cast<const wchar_t *>(rawData.constData()),
-                                    rawData.size() / sizeof(wchar_t));
-    QMap<QString, QString> map;
-    for (const auto &str : data.split(QStringLiteral(";"))) {
-        const auto index = str.indexOf(QStringLiteral("="));
-        map[str.mid(0, index)] = str.mid(index + 1);
-    }
-    const auto action = map[QStringLiteral("action")];
-    const auto snoreAction = SnoreToastActions::getAction(action.toStdWString());
-    qDebug() << "THE ID IS : " << notification->id() << "AND THE ACTION IS : " << action;
-    // if (action == QStringLiteral("clicked")) {
-    NotifyBySnore::notificationActionInvoked(notification->id(), static_cast<int>(snoreAction));
+    // ACTION! 
+    QObject::connect(server, &QLocalServer::newConnection, notification, [this,notification]() {
+        auto sock = server->nextPendingConnection();
+        sock->waitForReadyRead();
+        const QByteArray rawData = sock->readAll();
+        const QString data =
+                    QString::fromWCharArray(reinterpret_cast<const wchar_t *>(rawData.constData()),
+                                        rawData.size() / sizeof(wchar_t));
+        QMap<QString, QString> map;
+        for (const auto &str : data.split(QStringLiteral(";"))) {
+            const auto index = str.indexOf(QStringLiteral("="));
+            map[str.mid(0, index)] = str.mid(index + 1);
+        }
+        const auto action = map[QStringLiteral("action")];
+        const auto snoreAction = SnoreToastActions::getAction(action.toStdWString());
+        qDebug() << "THE ID IS : " << notification->id() << "AND THE ACTION IS : " << action;
+        // if (action == QStringLiteral("clicked")) {
+        NotifyBySnore::notificationActionInvoked(notification->id(), static_cast<int>(snoreAction));
    
-CRASHES JUST ABOUT HERE BECAUSE OF SOME LOCKED MUTEX. 
+// CRASHES JUST ABOUT HERE BECAUSE OF SOME LOCKED MUTEX. 
 });
     
     arguments << QStringLiteral("-t") << notification->title();
@@ -105,14 +105,9 @@ CRASHES JUST ABOUT HERE BECAUSE OF SOME LOCKED MUTEX.
     m_notifications.insert(notification->id(), notification);
     proc->start(program, arguments);
 
-    if(proc->waitForStarted(1000))
-    {
-        qDebug() << "SnoreToast displaying notification by ID: "<< notification->id();
-    }
-    else
-    {
-        qDebug() << "SnoreToast did not start in time for Notif-Show";
-    }
+    // connect(proc,&QProcess::started, notification, [this,notification](){
+    //     qDebug() << "SnoreToast displaying notification by ID: "<< notification->id();
+    // });
 }
 
 void NotifyBySnore::close(KNotification* notification)
@@ -124,7 +119,7 @@ void NotifyBySnore::close(KNotification* notification)
 
     qDebug() << "SnoreToast closing notification by ID: "<< notification->id();
 
-    proc = new QProcess();
+    QProcess *proc = new QProcess();
     QStringList arguments;
     arguments << QStringLiteral("-close") << QString::number(notification->id())
               << QStringLiteral("-appID") << app->applicationName();
