@@ -30,7 +30,6 @@
 #include <QDir>
 
 
-#include <QTemporaryFile>
 #include <QTemporaryDir>
 
 #include <QLoggingCategory>
@@ -42,14 +41,15 @@
 
 static NotifyBySnore *s_instance = nullptr;
 
-// !IMPORTANT! apps must have shortcut appID same as app->applicationName()
-
+// !DOCUMENT THIS! apps must have shortcut appID same as app->applicationName()
 NotifyBySnore::NotifyBySnore(QObject* parent) :
     KNotificationPlugin(parent)
 {
     s_instance = this;
     app = QCoreApplication::instance();
     iconDir = new QTemporaryDir();
+    server = new QLocalServer();
+    server->listen(app->applicationName());
 }
 
 NotifyBySnore::~NotifyBySnore()
@@ -65,20 +65,46 @@ void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
         }
     proc = new QProcess();
 
-    QTemporaryFile iconFile;
     QStringList arguments;
     QFile file(iconDir->path() + QString::number(notification->id()));
     if (!notification->pixmap().isNull()) {
             notification->pixmap().save(&file, "PNG");
 }
- 
+
+    ACTION! 
+    QObject::connect(server, &QLocalServer::newConnection, server, [this,notification]() {
+    auto sock = server->nextPendingConnection();
+    sock->waitForReadyRead();
+    const QByteArray rawData = sock->readAll();
+    const QString data =
+            QString::fromWCharArray(reinterpret_cast<const wchar_t *>(rawData.constData()),
+                                    rawData.size() / sizeof(wchar_t));
+    QMap<QString, QString> map;
+    for (const auto &str : data.split(QStringLiteral(";"))) {
+        const auto index = str.indexOf(QStringLiteral("="));
+        map[str.mid(0, index)] = str.mid(index + 1);
+    }
+    const auto action = map[QStringLiteral("action")];
+    const auto snoreAction = SnoreToastActions::getAction(action.toStdWString());
+    qDebug() << "THE ID IS : " << notification->id() << "AND THE ACTION IS : " << action;
+    // if (action == QStringLiteral("clicked")) {
+    NotifyBySnore::notificationActionInvoked(notification->id(), static_cast<int>(snoreAction));
+   
+CRASHES JUST ABOUT HERE BECAUSE OF SOME LOCKED MUTEX. 
+});
+    
     arguments << QStringLiteral("-t") << notification->title();
-    arguments << QStringLiteral("-m") << notification->text();
+    arguments << QStringLiteral("-m") << notification->text()+QString::number(notification->id());
     arguments << QStringLiteral("-p") <<  file.fileName();
-    arguments << QStringLiteral("-appID") << app->applicationName(); 
+    arguments << QStringLiteral("-appID") << app->applicationName();
     arguments << QStringLiteral("-id") << QString::number(notification->id());
+    arguments << QStringLiteral("-pipename") << server->fullServerName();
+    if (!notification->actions().isEmpty()){
+        arguments << QStringLiteral("-b") << notification->actions().join(QStringLiteral(";"));
+    }
     m_notifications.insert(notification->id(), notification);
     proc->start(program, arguments);
+
     if(proc->waitForStarted(1000))
     {
         qDebug() << "SnoreToast displaying notification by ID: "<< notification->id();
