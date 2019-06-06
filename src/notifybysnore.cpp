@@ -66,14 +66,42 @@ NotifyBySnore::NotifyBySnore(QObject* parent) :
         const auto action = map[QStringLiteral("action")];
         const auto ID = map[QStringLiteral("notificationId")].toInt();
 
-        const auto snoreAction = static_cast<int>(SnoreToastActions::getAction(action.toStdWString()));
-        qDebug() << "THE ID IS : " << QString::number(ID) << "AND THE INTERACTION WAS : " << QString::number(snoreAction) <<" : "<< action;
-        const auto button = map[QStringLiteral("button")];
-        if(snoreAction == 4){
-            qDebug() << "AND THE BUTTON CLICKED IS : " << button;
-            QStringList s = m_notifications.value(ID)->actions();
-            int action_no = s.indexOf(button) + 1;
-            NotifyBySnore::notificationActionInvoked(ID, action_no); 
+        const auto snoreAction = SnoreToastActions::getAction(action.toStdWString());
+        qDebug() << "THE ID IS : " << QString::number(ID);
+        switch(snoreAction){
+            case SnoreToastActions::Actions::Clicked :{
+                                    qDebug() << " User clicked on the toast.";
+                                    break;
+            }
+
+            case SnoreToastActions::Actions::Hidden :{
+                                    qDebug() << "The toast got hidden.";
+                                    break;
+            }
+            case SnoreToastActions::Actions::Dismissed :{
+                                    qDebug() << "User dismissed the toast.";
+                                    break;
+            }
+            case SnoreToastActions::Actions::Timedout :{
+                                    qDebug() << "The toast timed out.";
+                                    break;
+            }
+            case SnoreToastActions::Actions::ButtonClicked :{
+                                    qDebug() << " User clicked a button on the toast.";
+                                    const auto button = map[QStringLiteral("button")];
+                                    QStringList s = m_notifications.value(ID)->actions();
+                                    int action_no = s.indexOf(button) + 1; // QStringList starts with 0 but not actions
+                                    NotifyBySnore::notificationActionInvoked(ID, action_no);
+                                    break;
+            }
+            case SnoreToastActions::Actions::TextEntered :{
+                                    qDebug() << " User entered some text in the toast.";
+                                    break;
+            }
+            default:{
+                qDebug() << "Something weird happened to the toast.";
+                break;
+            }
         }
 });
 }
@@ -85,7 +113,7 @@ NotifyBySnore::~NotifyBySnore()
 
 void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
 {
-    if (m_notifications.find(notification->id()) != m_notifications.end() || notification->id() == -1) {
+    if (m_notifications.find(notification->id()) != m_notifications.end()) {
             qDebug() << "AHAA ! Duplicate for ID: " << notification->id() << " caught!";
             return;
         }
