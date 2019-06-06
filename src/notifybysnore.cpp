@@ -64,13 +64,17 @@ NotifyBySnore::NotifyBySnore(QObject* parent) :
             map[str.mid(0, index)] = str.mid(index + 1);
         }
         const auto action = map[QStringLiteral("action")];
-        const auto ID = map[QStringLiteral("notificationId")];
+        const auto ID = map[QStringLiteral("notificationId")].toInt();
+        
         const auto snoreAction = SnoreToastActions::getAction(action.toStdWString());
-        qDebug() << "THE ID IS : " << ID << "AND THE ACTION IS : " << action;
-        // if (action == QStringLiteral("clicked")) {
-        NotifyBySnore::notificationActionInvoked( ID.toInt() , static_cast<int>(snoreAction));
-   
-// CRASHES JUST ABOUT HERE BECAUSE OF SOME LOCKED MUTEX. 
+        qDebug() << "THE ID IS : " << QString::number(ID) << "AND THE INTERACTION WAS : " << QString::number(static_cast<int>(snoreAction)) <<" : "<< action;
+        const auto button = map[QStringLiteral("button")];
+        if(!button.isEmpty()){
+            qDebug() << "AND THE BUTTON CLICKED IS : " << button;
+            QStringList s = m_notifications.value(ID)->actions();
+            int action_no = s.indexOf(button) + 1;
+            NotifyBySnore::notificationActionInvoked(ID, action_no); 
+        }
 });
 }
 
@@ -102,12 +106,9 @@ void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
     if (!notification->actions().isEmpty()){
         arguments << QStringLiteral("-b") << notification->actions().join(QStringLiteral(";"));
     }
-    m_notifications.insert(notification->id(), notification);
+    m_notifications.insert(notification->id(), notification); // I don't need to store whole 
     proc->start(program, arguments);
 
-    // connect(proc,&QProcess::started, notification, [this,notification](){
-    //     qDebug() << "SnoreToast displaying notification by ID: "<< notification->id();
-    // });
 }
 
 void NotifyBySnore::close(KNotification* notification)
