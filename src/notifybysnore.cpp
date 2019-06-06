@@ -66,10 +66,10 @@ NotifyBySnore::NotifyBySnore(QObject* parent) :
         const auto action = map[QStringLiteral("action")];
         const auto ID = map[QStringLiteral("notificationId")].toInt();
 
-        const auto snoreAction = SnoreToastActions::getAction(action.toStdWString());
-        qDebug() << "THE ID IS : " << QString::number(ID) << "AND THE INTERACTION WAS : " << QString::number(static_cast<int>(snoreAction)) <<" : "<< action;
+        const auto snoreAction = static_cast<int>(SnoreToastActions::getAction(action.toStdWString()));
+        qDebug() << "THE ID IS : " << QString::number(ID) << "AND THE INTERACTION WAS : " << QString::number(snoreAction) <<" : "<< action;
         const auto button = map[QStringLiteral("button")];
-        if(!action.compare(QStringLiteral("buttonClicked"))){
+        if(snoreAction == 4){
             qDebug() << "AND THE BUTTON CLICKED IS : " << button;
             QStringList s = m_notifications.value(ID)->actions();
             int action_no = s.indexOf(button) + 1;
