@@ -50,6 +50,28 @@ NotifyBySnore::NotifyBySnore(QObject* parent) :
     iconDir = new QTemporaryDir();
     server = new QLocalServer();
     server->listen(app->applicationName());
+
+    QObject::connect(server, &QLocalServer::newConnection, server, [this]() {
+        auto sock = server->nextPendingConnection();
+        sock->waitForReadyRead();
+        const QByteArray rawData = sock->readAll();
+        const QString data =
+                    QString::fromWCharArray(reinterpret_cast<const wchar_t *>(rawData.constData()),
+                                        rawData.size() / sizeof(wchar_t));
+        QMap<QString, QString> map;
+        for (const auto &str : data.split(QStringLiteral(";"))) {
+            const auto index = str.indexOf(QStringLiteral("="));
+            map[str.mid(0, index)] = str.mid(index + 1);
+        }
+        const auto action = map[QStringLiteral("action")];
+        const auto ID = map[QStringLiteral("notificationId")];
+        const auto snoreAction = SnoreToastActions::getAction(action.toStdWString());
+        qDebug() << "THE ID IS : " << ID << "AND THE ACTION IS : " << action;
+        // if (action == QStringLiteral("clicked")) {
+        NotifyBySnore::notificationActionInvoked( ID.toInt() , static_cast<int>(snoreAction));
+   
+// CRASHES JUST ABOUT HERE BECAUSE OF SOME LOCKED MUTEX. 
+});
 }
 
 NotifyBySnore::~NotifyBySnore()
@@ -70,28 +92,6 @@ void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
     if (!notification->pixmap().isNull()) {
             notification->pixmap().save(&file, "PNG");
 }
-
-    // ACTION! 
-    QObject::connect(server, &QLocalServer::newConnection, notification, [this,notification]() {
-        auto sock = server->nextPendingConnection();
-        sock->waitForReadyRead();
-        const QByteArray rawData = sock->readAll();
-        const QString data =
-                    QString::fromWCharArray(reinterpret_cast<const wchar_t *>(rawData.constData()),
-                                        rawData.size() / sizeof(wchar_t));
-        QMap<QString, QString> map;
-        for (const auto &str : data.split(QStringLiteral(";"))) {
-            const auto index = str.indexOf(QStringLiteral("="));
-            map[str.mid(0, index)] = str.mid(index + 1);
-        }
-        const auto action = map[QStringLiteral("action")];
-        const auto snoreAction = SnoreToastActions::getAction(action.toStdWString());
-        qDebug() << "THE ID IS : " << notification->id() << "AND THE ACTION IS : " << action;
-        // if (action == QStringLiteral("clicked")) {
-        NotifyBySnore::notificationActionInvoked(notification->id(), static_cast<int>(snoreAction));
-   
-// CRASHES JUST ABOUT HERE BECAUSE OF SOME LOCKED MUTEX. 
-});
     
     arguments << QStringLiteral("-t") << notification->title();
     arguments << QStringLiteral("-m") << notification->text()+QString::number(notification->id());
