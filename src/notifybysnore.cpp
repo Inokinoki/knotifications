@@ -65,7 +65,7 @@ NotifyBySnore::NotifyBySnore(QObject* parent) :
         }
         const auto action = map[QStringLiteral("action")];
         const auto ID = map[QStringLiteral("notificationId")].toInt();
-        
+
         const auto snoreAction = SnoreToastActions::getAction(action.toStdWString());
         qDebug() << "THE ID IS : " << QString::number(ID) << "AND THE INTERACTION WAS : " << QString::number(static_cast<int>(snoreAction)) <<" : "<< action;
         const auto button = map[QStringLiteral("button")];
@@ -96,7 +96,7 @@ void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
     if (!notification->pixmap().isNull()) {
             notification->pixmap().save(&file, "PNG");
 }
-    
+
     arguments << QStringLiteral("-t") << notification->title();
     arguments << QStringLiteral("-m") << notification->text();
     arguments << QStringLiteral("-p") <<  file.fileName();
