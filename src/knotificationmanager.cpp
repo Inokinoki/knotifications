@@ -41,15 +41,13 @@
 #include "notifybytaskbar.h"
 #include "notifybyexecute.h"
 
-#ifdef Q_OS_ANDROID
+#if defined(Q_OS_ANDROID)
     #include "notifybyandroid.h"
+#elif defined(Q_OS_WIN)
+    #include "notifybysnore.h"
 #else
-    #ifdef Q_OS_WIN
-        #include "notifybysnore.h"
-    #else
-        #include "notifybypopup.h"
-        #include "notifybyportal.h"
-    #endif
+    #include "notifybypopup.h"
+    #include "notifybyportal.h"
 #endif
 
 #include "debug_p.h"
@@ -73,7 +71,6 @@ struct Q_DECL_HIDDEN KNotificationManager::Private {
     // incremental ids for notifications
     int notifyIdCounter;
     QStringList dirtyConfigCache;
-    bool inSandbox = false;
     bool portalDBusServiceExists = false;
 };
 
@@ -97,18 +94,11 @@ KNotificationManager::KNotificationManager()
     qDeleteAll(d->notifyPlugins);
     d->notifyPlugins.clear();
 
-    if (!qEnvironmentVariableIsEmpty("XDG_RUNTIME_DIR")) {
-        const QByteArray runtimeDir = qgetenv("XDG_RUNTIME_DIR");
-        if (!runtimeDir.isEmpty()) {
-            d->inSandbox = QFileInfo::exists(QFile::decodeName(runtimeDir) + QLatin1String("/flatpak-info"));
-        }
-    } else if (qEnvironmentVariableIsSet("SNAP")) {
-        d->inSandbox = true;
-    }
+ #ifdef QT_DBUS_LIB
+     const bool inSandbox = QFileInfo::exists(QLatin1String("/.flatpak-info")) || qEnvironmentVariableIsSet("SNAP");
 
-#ifdef QT_DBUS_LIB
-    if (d->inSandbox) {
-        QDBusConnectionInterface *interface = QDBusConnection::sessionBus().interface();
+     if (inSandbox) {
+         QDBusConnectionInterface *interface = QDBusConnection::sessionBus().interface();
         d->portalDBusServiceExists = interface->isServiceRegistered(QStringLiteral("org.freedesktop.portal.Desktop"));
     }
 
@@ -147,19 +137,17 @@ KNotificationPlugin *KNotificationManager::pluginForAction(const QString &action
     // We have a series of built-ins up first, and fall back to trying
     // to instantiate an externally supplied plugin.
     if (action == QLatin1String("Popup")) {
-        #ifdef Q_OS_ANDROID
+        #if defined(Q_OS_ANDROID)
             plugin = new NotifyByAndroid(this);
+        #elif defined(Q_OS_WIN)
+            plugin = new NotifyBySnore(this);
         #else
-            #ifdef Q_OS_WIN
-                plugin = new NotifyBySnore(this);
-            #else
-                if (d->inSandbox && d->portalDBusServiceExists) {
-                    plugin = new NotifyByPortal(this);
-                } 
-                else {
-                    plugin = new NotifyByPopup(this);
-                }
-            #endif
+        if (d->inSandbox && d->portalDBusServiceExists) {
+            plugin = new NotifyByPortal(this);
+        } 
+        else {
+            plugin = new NotifyByPopup(this);
+        }
         #endif
         addPlugin(plugin);
     } else if (action == QLatin1String("Taskbar")) {

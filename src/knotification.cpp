@@ -376,14 +376,12 @@ void KNotification::Private::raiseWidget(QWidget *w)
 
 static QString defaultComponentName()
 {
-#ifdef Q_OS_ANDROID
+#if defined(Q_OS_ANDROID)
     return QStringLiteral("android_defaults");
-#else
-#ifdef Q_OS_WIN
+#elif defined(Q_OS_WIN)
     return QStringLiteral("win32_defaults");    
 #else
     return QStringLiteral("plasma_workspace");
-#endif
 #endif
 }
 

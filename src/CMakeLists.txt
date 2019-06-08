@@ -35,23 +35,20 @@ if (TARGET Qt5::DBus)
 endif()
 
 if (ANDROID)
-  add_subdirectory(android)
-  list(APPEND knotifications_SRCS notifybyandroid.cpp knotifications.qrc)
+    add_subdirectory(android)
+    list(APPEND knotifications_SRCS notifybyandroid.cpp knotifications.qrc)
 endif()
 
 if (WIN32)
-  if (MSVC)
   find_package(LibSnoreToast REQUIRED)
-    set_package_properties(LibSnoreToast PROPERTIES TYPE OPTIONAL
-
-        PURPOSE     "Enable support for the snorenotify framework"
-        DESCRIPTION "a cross-platform notification framework"
-    )
+   set_package_properties(LibSnoreToast PROPERTIES TYPE REQUIRED
+      PURPOSE     "Enable support for the snorenotify framework"
+      DESCRIPTION "a cross-platform notification framework"
+   )
   find_package(Qt5Core REQUIRED)
   find_package(Qt5Network REQUIRED)
   list(APPEND knotifications_SRCS notifybysnore.cpp)
   endif ()
-endif ()
 
 ecm_qt_declare_logging_category(knotifications_SRCS HEADER debug_p.h IDENTIFIER LOG_KNOTIFICATIONS CATEGORY_NAME org.kde.knotifications)
 
@@ -112,7 +109,7 @@ target_link_libraries(KF5Notifications PRIVATE
    KF5::Codecs
 )
 if (MSVC)
-target_link_libraries(KF5Notifications PRIVATE Qt5::Core Qt5::Network SnoreToast::SnoreToastActions)
+  target_link_libraries(KF5Notifications PRIVATE Qt5::Core Qt5::Network SnoreToast::SnoreToastActions)
 endif ()
 
 if (Phonon4Qt5_FOUND)

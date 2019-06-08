@@ -22,7 +22,6 @@
 
 #include <QPointer>
 #include <QLocalServer>
-#include <QLocalSocket>
 #include <QProcess>
 #include <QString>
 #include <QTemporaryDir>
@@ -41,14 +40,11 @@ public:
     void notify(KNotification *notification, KNotifyConfig *config) override;
     void close(KNotification * notification) override;
     void update(KNotification *notification, KNotifyConfig *config) override;
-    void notificationActionInvoked(int id, int action);
 private:
-    QHash<int, QPointer<KNotification>> m_notifications;
+    QMap<int, QPointer<KNotification>> m_notifications;
     QString program = QStringLiteral("SnoreToast.exe");
-    // QProcess *proc;
     QLocalServer *server;
     QTemporaryDir *iconDir;
-    QCoreApplication *app;
 };
 
 #endif // NOTIFYBYSNORE_H

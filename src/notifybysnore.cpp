@@ -39,17 +39,12 @@
 
 #include <snoretoastactions.h>
 
-static NotifyBySnore *s_instance = nullptr;
-
-// !DOCUMENT THIS! apps must have shortcut appID same as app->applicationName()
 NotifyBySnore::NotifyBySnore(QObject* parent) :
     KNotificationPlugin(parent)
 {
-    s_instance = this;
-    app = QCoreApplication::instance();
     iconDir = new QTemporaryDir();
     server = new QLocalServer();
-    server->listen(app->applicationName());
+    server->listen(qApp->applicationName());
 
     QObject::connect(server, &QLocalServer::newConnection, server, [this]() {
         auto sock = server->nextPendingConnection();
@@ -61,45 +56,45 @@ NotifyBySnore::NotifyBySnore(QObject* parent) :
         QMap<QString, QString> map;
         for (const auto &str : data.split(QStringLiteral(";"))) {
             const auto index = str.indexOf(QStringLiteral("="));
-            map[str.mid(0, index)] = str.mid(index + 1);
+            map.insert(str.mid(0, index), str.mid(index + 1));
         }
         const auto action = map[QStringLiteral("action")];
-        const auto ID = map[QStringLiteral("notificationId")].toInt();
+        const auto id = map[QStringLiteral("notificationId")].toInt();
 
         const auto snoreAction = SnoreToastActions::getAction(action.toStdWString());
-        qDebug() << "THE ID IS : " << QString::number(ID);
+        qCDebug(LOG_KNOTIFICATIONS) << "The notification ID is : " << QString::number(id);
         switch(snoreAction){
             case SnoreToastActions::Actions::Clicked :{
-                                    qDebug() << " User clicked on the toast.";
+                                    qCDebug(LOG_KNOTIFICATIONS) << " User clicked on the toast.";
                                     break;
             }
 
             case SnoreToastActions::Actions::Hidden :{
-                                    qDebug() << "The toast got hidden.";
+                                    qCDebug(LOG_KNOTIFICATIONS) << "The toast got hidden.";
                                     break;
             }
             case SnoreToastActions::Actions::Dismissed :{
-                                    qDebug() << "User dismissed the toast.";
+                                    qCDebug(LOG_KNOTIFICATIONS) << "User dismissed the toast.";
                                     break;
             }
             case SnoreToastActions::Actions::Timedout :{
-                                    qDebug() << "The toast timed out.";
+                                    qCDebug(LOG_KNOTIFICATIONS) << "The toast timed out.";
                                     break;
             }
             case SnoreToastActions::Actions::ButtonClicked :{
-                                    qDebug() << " User clicked a button on the toast.";
+                                    qCDebug(LOG_KNOTIFICATIONS) << " User clicked a button on the toast.";
                                     const auto button = map[QStringLiteral("button")];
-                                    QStringList s = m_notifications.value(ID)->actions();
-                                    int action_no = s.indexOf(button) + 1; // QStringList starts with index 0 but not actions
-                                    NotifyBySnore::notificationActionInvoked(ID, action_no);
+                                    QStringList s = m_notifications.value(id)->actions();
+                                    int actionNum = s.indexOf(button) + 1; // QStringList starts with index 0 but not actions
+                                    emit actionInvoked(id, actionNum);
                                     break;
             }
             case SnoreToastActions::Actions::TextEntered :{
-                                    qDebug() << " User entered some text in the toast.";
+                                    qCDebug(LOG_KNOTIFICATIONS) << " User entered some text in the toast.";
                                     break;
             }
             default:{
-                qDebug() << "Something weird happened to the toast.";
+                qCDebug(LOG_KNOTIFICATIONS) << "Something weird happened to the toast.";
                 break;
             }
         }
@@ -108,35 +103,57 @@ NotifyBySnore::NotifyBySnore(QObject* parent) :
 
 NotifyBySnore::~NotifyBySnore()
 {
-    s_instance = nullptr;
+    server->close();
+    iconDir->remove();
 }
 
 void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
 {
-    if (m_notifications.find(notification->id()) != m_notifications.end() || notification->id() == -1) {
-            qDebug() << "AHAA ! Duplicate for ID: " << notification->id() << " caught!";
+    if (m_notifications.constFind(notification->id()) != m_notifications.constEnd()) {
+            qCDebug(LOG_KNOTIFICATIONS) << "Duplicate notification with ID: " << notification->id() << " ignored.";
             return;
         }
     QProcess *proc = new QProcess();
 
     QStringList arguments;
-    QFile file(iconDir->path() + QString::number(notification->id()));
-    if (!notification->pixmap().isNull()) {
-            notification->pixmap().save(&file, "PNG");
-}
+    QString iconPath(QStringLiteral(""));
 
-    arguments << QStringLiteral("-t") << notification->title();
+
+    arguments << QStringLiteral("-t");
+    if(!notification->title().isEmpty()){ 
+        arguments << notification->title();
+    }
+    else{
+        arguments << qApp->applicationDisplayName();
+    }
+    
     arguments << QStringLiteral("-m") << notification->text();
-    arguments << QStringLiteral("-p") <<  file.fileName();
-    arguments << QStringLiteral("-appID") << app->applicationName();
-    arguments << QStringLiteral("-id") << QString::number(notification->id());
-    arguments << QStringLiteral("-pipename") << server->fullServerName();
+    
+    if(!notification->pixmap().isNull()){
+        iconPath.append(iconDir->path() + QStringLiteral("/") 
+                        + QString::number(notification->id()) + QStringLiteral(".png"));
+        notification->pixmap().save(iconPath, "PNG");
+        arguments << QStringLiteral("-p") <<  iconPath;
+    }
+    
+    arguments << QStringLiteral("-appID") << qApp->applicationName()
+              << QStringLiteral("-id") << QString::number(notification->id())
+              << QStringLiteral("-pipename") << server->fullServerName();
+    
     if (!notification->actions().isEmpty()){
         arguments << QStringLiteral("-b") << notification->actions().join(QStringLiteral(";"));
     }
-    m_notifications.insert(notification->id(), notification); // I don't need to store whole 
+    
+    qDebug() << arguments;
+    m_notifications.insert(notification->id(), notification);
     proc->start(program, arguments);
 
+   connect(proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+        [=](int exitCode, QProcess::ExitStatus exitStatus){ 
+        proc->close();
+        QFile file(iconPath);
+        file.remove();
+    });
 }
 
 void NotifyBySnore::close(KNotification* notification)
@@ -146,29 +163,27 @@ void NotifyBySnore::close(KNotification* notification)
         return;
     }
 
-    qDebug() << "SnoreToast closing notification by ID: "<< notification->id();
+    qCDebug(LOG_KNOTIFICATIONS) << "SnoreToast closing notification with ID: "<< notification->id();
 
     QProcess *proc = new QProcess();
     QStringList arguments;
     arguments << QStringLiteral("-close") << QString::number(notification->id())
-              << QStringLiteral("-appID") << app->applicationName();
-;
+              << QStringLiteral("-appID") << qApp->applicationName();
     proc->start(program, arguments);
-    arguments.clear();
-
-    m_notifications.erase(it);
     if (it.value()) {
         finish(it.value());
     }
+    arguments.clear();
+    m_notifications.erase(it);
+    connect(proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+    [=](int exitCode, QProcess::ExitStatus exitStatus){ 
+        proc->close();
+    });
+
 }
 
 void NotifyBySnore::update(KNotification *notification, KNotifyConfig *config)
 {
     close(notification);
     notify(notification, config);
-}
-
-void NotifyBySnore::notificationActionInvoked(int id, int action)
-{
-    emit actionInvoked(id, action);
 }
