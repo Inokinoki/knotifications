@@ -42,8 +42,8 @@ endif()
 if (WIN32)
   find_package(LibSnoreToast REQUIRED)
    set_package_properties(LibSnoreToast PROPERTIES TYPE REQUIRED
-      PURPOSE     "Enable support for the snorenotify framework"
-      DESCRIPTION "a cross-platform notification framework"
+      PURPOSE     "Enable support for the Windows Toast Notifications with SnoreToast back-end for KNotifications"
+      DESCRIPTION "A command line application which is capable of creating Windows Toast notifications on Windows 8 or later."
    )
   find_package(Qt5Core REQUIRED)
   find_package(Qt5Network REQUIRED)
@@ -108,7 +108,7 @@ target_link_libraries(KF5Notifications PRIVATE
    KF5::WindowSystem
    KF5::Codecs
 )
-if (MSVC)
+if (TARGET SnoreToast::SnoreToastActions)
   target_link_libraries(KF5Notifications PRIVATE Qt5::Core Qt5::Network SnoreToast::SnoreToastActions)
 endif ()
 
