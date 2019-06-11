@@ -26,7 +26,6 @@
 #include <QString>
 #include <QTemporaryDir>
 
-
 /** Windows notification backend - inspired by Android notification backend. */
 class NotifyBySnore : public KNotificationPlugin
 {
@@ -43,8 +42,8 @@ public:
 private:
     QMap<int, QPointer<KNotification>> m_notifications;
     QString program = QStringLiteral("SnoreToast.exe");
-    QLocalServer *server;
-    QTemporaryDir *iconDir;
+    QLocalServer server;
+    QTemporaryDir iconDir;
 };
 
 #endif // NOTIFYBYSNORE_H
