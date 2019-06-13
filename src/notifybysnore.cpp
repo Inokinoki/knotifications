@@ -161,17 +161,19 @@ void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
     qCDebug(LOG_KNOTIFICATIONS) << arguments;
 
     proc->start(program, arguments);
-    
     if(!proc->waitForStarted()){
-        m_notifications.insert(notification->id(), notification);
+    } else {
         finish(notification);
     }
     connect(proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             [=](int exitCode, QProcess::ExitStatus exitStatus){ 
                 proc->deleteLater();
+                m_notifications.insert(notification->id(), notification);
                 if(exitStatus == QProcess::NormalExit){
+                    if(QFile::remove(QString(iconDir.path() + QLatin1Char('/') 
+                                + QString::number(notification->id()) + QStringLiteral(".png"))))
                 } else{
-                    qDebug() << "SnoreToast crashed.";
+                    qCDebug(LOG_KNOTIFICATIONS) << "SnoreToast crashed while trying to show a notification.";
                     close(notification);
                 }
     });
