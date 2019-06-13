@@ -45,8 +45,8 @@ if (WIN32)
       PURPOSE     "Enable support for the Windows Toast Notifications with SnoreToast back-end for KNotifications"
       DESCRIPTION "A command line application which is capable of creating Windows Toast notifications on Windows 8 or later."
    )
-  find_package(Qt5Core REQUIRED)
   find_package(Qt5Network REQUIRED)
+  find_package(Qt5XmlPatterns REQUIRED)
   list(APPEND knotifications_SRCS notifybysnore.cpp)
   endif ()
 
@@ -109,7 +109,7 @@ target_link_libraries(KF5Notifications PRIVATE
    KF5::Codecs
 )
 if (TARGET SnoreToast::SnoreToastActions)
-  target_link_libraries(KF5Notifications PRIVATE Qt5::Core Qt5::Network SnoreToast::SnoreToastActions)
+  target_link_libraries(KF5Notifications PRIVATE Qt5::Network Qt5::XmlPatterns SnoreToast::SnoreToastActions)
 endif ()
 
 if (Phonon4Qt5_FOUND)

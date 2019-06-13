@@ -40,7 +40,7 @@ public:
     void close(KNotification * notification) override;
     void update(KNotification *notification, KNotifyConfig *config) override;
 private:
-    QMap<int, QPointer<KNotification>> m_notifications;
+    QHash<int, QPointer<KNotification>> m_notifications;
     QString program = QStringLiteral("SnoreToast.exe");
     QLocalServer server;
     QTemporaryDir iconDir;
