@@ -86,7 +86,11 @@ NotifyBySnore::NotifyBySnore(QObject* parent) :
         if (it != m_notifications.constEnd()) {
             notification = it.value();
         }
-        const auto snoreAction = SnoreToastActions::getAction(action.toStdWString());
+        std::wstring waction(action.size(), 0);
+        action.toWCharArray(const_cast<wchar_t *>(waction.data()));
+        const auto snoreAction = SnoreToastActions::getAction(waction);
+        // MSVC2019 has issues with QString::toStdWString()
+
         qCDebug(LOG_KNOTIFICATIONS) << "The notification ID is : " << id;
         switch (snoreAction) {
         case SnoreToastActions::Actions::Clicked:
