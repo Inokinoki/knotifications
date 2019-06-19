@@ -25,7 +25,6 @@
 #include <QLoggingCategory>
 #include <QLocalSocket>
 #include <QGuiApplication>
-#include <QSourceLocation>
 
 #include <snoretoastactions.h>
 
@@ -64,12 +63,11 @@ NotifyBySnore::NotifyBySnore(QObject* parent) :
     KNotificationPlugin(parent)
 {
     server.listen(QString::number(qHash(qApp->applicationDirPath()))); 
-    QObject::connect(&server, &QLocalServer::newConnection, &server, [this]() {
+    connect(&server, &QLocalServer::newConnection, &server, [this]() {
         auto sock = server.nextPendingConnection();
         sock->waitForReadyRead();
         const QByteArray rawData = sock->readAll();
         sock->deleteLater();
-        sock->close();
         const QString data =
                     QString::fromWCharArray(reinterpret_cast<const wchar_t *>(rawData.constData()),
                                         rawData.size() / sizeof(wchar_t));
@@ -77,19 +75,26 @@ NotifyBySnore::NotifyBySnore(QObject* parent) :
         const auto parts = data.splitRef(QLatin1Char(';'));
         for (auto &str : parts) {
             const auto index = str.indexOf(QLatin1Char('='));
-            map.insert(str.toString().mid(0, index), str.mid(index + 1));
+            map.insert(str.mid(0, index).toString(), str.mid(index + 1));
         }
         const auto action = map[QStringLiteral("action")].toString();
-        const auto id = map[QStringLiteral("notificationId")].toString().toInt();
+        const auto id = map[QStringLiteral("notificationId")].toInt();
         KNotification *notification;
         const auto it = m_notifications.constFind(id);
         if (it != m_notifications.constEnd()) {
             notification = it.value();
         }
+        else { 
+            qCDebug(LOG_KNOTIFICATIONS) << "Notification not found!";
+            return;
+        }
+        
+        // MSVC2019 has issues with QString::toStdWString()
+        // Qstring::toStdWString() doesn't work with MSVC2019 yet. If it gets fixed
+        // in future, feel free to change the implementation below for lesser LOC.
         std::wstring waction(action.size(), 0);
         action.toWCharArray(const_cast<wchar_t *>(waction.data()));
         const auto snoreAction = SnoreToastActions::getAction(waction);
-        // MSVC2019 has issues with QString::toStdWString()
 
         qCDebug(LOG_KNOTIFICATIONS) << "The notification ID is : " << id;
         switch (snoreAction) {
@@ -112,7 +117,7 @@ NotifyBySnore::NotifyBySnore(QObject* parent) :
             qCDebug(LOG_KNOTIFICATIONS) << " User clicked a button on the toast.";
             const auto button = map[QStringLiteral("button")].toString();
             QStringList s = m_notifications.value(id)->actions();
-            int actionNum = s.indexOf(button) + 1; // QStringList starts with index 0 but not actions
+            int actionNum = s.indexOf(button) + 1;       // QStringList starts with index 0 but not actions
             emit actionInvoked(id, actionNum);
             break;}
         case SnoreToastActions::Actions::TextEntered:
@@ -135,10 +140,10 @@ NotifyBySnore::~NotifyBySnore()
 
 void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
 {
-    if (m_notifications.constFind(notification->id()) != m_notifications.constEnd()) {
-            qCDebug(LOG_KNOTIFICATIONS) << "Duplicate notification with ID: " << notification->id() << " ignored.";
-            return;
-        }
+    if (m_notifications.constFind(notification->id()) != m_notifications.constEnd() || notification->id() == -1) {
+        qCDebug(LOG_KNOTIFICATIONS) << "Duplicate notification with ID: " << notification->id() << " ignored.";
+        return;
+    }
     QProcess *proc = new QProcess();
     QStringList arguments;
 
@@ -155,52 +160,42 @@ void NotifyBySnore::notify(KNotification *notification, KNotifyConfig *config)
         notification->pixmap().save(iconPath, "PNG");
         arguments << QStringLiteral("-p") << iconPath;
     }
-    arguments << QStringLiteral("-appID") << qApp->applicationName()
-            << QStringLiteral("-id") << QString::number(notification->id())
-            << QStringLiteral("-pipename") << server.fullServerName();
+    arguments   << QStringLiteral("-appID") << qApp->applicationName()
+                << QStringLiteral("-id") << QString::number(notification->id())
+                << QStringLiteral("-pipename") << server.fullServerName();
 
     if (!notification->actions().isEmpty()) {
         arguments << QStringLiteral("-b") << notification->actions().join(QLatin1Char(';'));
     }
     qCDebug(LOG_KNOTIFICATIONS) << arguments;
-
     proc->start(program, arguments);
-    if (!proc->waitForStarted()) {
-    } else {
-        finish(notification);
-    }
     m_notifications.insert(notification->id(), notification);
-    
     connect(proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             [=](int exitCode, QProcess::ExitStatus exitStatus){ 
                 proc->deleteLater();
-                if (exitStatus == QProcess::NormalExit) {
-                    QFile::remove(QString(iconDir.path() + QLatin1Char('/') 
-                                + QString::number(notification->id()) + QStringLiteral(".png")));
-                } else {
+                if (exitStatus != QProcess::NormalExit) {
                     qCDebug(LOG_KNOTIFICATIONS) << "SnoreToast crashed while trying to show a notification.";
                     close(notification);
                 }
+                QFile::remove(QString(iconDir.path() + QLatin1Char('/') 
+                            + QString::number(notification->id()) + QStringLiteral(".png")));
     });
 }
 
 void NotifyBySnore::close(KNotification *notification)
 {
-    const auto it = m_notifications.constFind(notification->id());
-    if (it == m_notifications.constEnd()) {
+    if (m_notifications.constFind(notification->id()) == m_notifications.constEnd()) {
         return;
     }
-
     qCDebug(LOG_KNOTIFICATIONS) << "SnoreToast closing notification with ID: " << notification->id();
-
     QStringList arguments;
-    arguments << QStringLiteral("-close") << QString::number(notification->id())
-            << QStringLiteral("-appID") << qApp->applicationName();
+    arguments   << QStringLiteral("-close") << QString::number(notification->id())
+                << QStringLiteral("-appID") << qApp->applicationName();
     QProcess::startDetached(program, arguments);
-    if (it.value()) {
-        finish(it.value());
+    if (notification) {
+        finish(notification);
     }
-    m_notifications.erase(it);
+    m_notifications.remove(notification->id());
 }
 
 void NotifyBySnore::update(KNotification *notification, KNotifyConfig *config)
