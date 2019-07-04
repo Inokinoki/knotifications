@@ -41,6 +41,11 @@ endif()
 
 ecm_qt_declare_logging_category(knotifications_SRCS HEADER debug_p.h IDENTIFIER LOG_KNOTIFICATIONS CATEGORY_NAME org.kde.knotifications)
 
+if (APPLE)
+  message("Is Apple")
+  list(APPEND knotifications_SRCS notifybymacosnotificationcenter.mm)
+endif()
+
 if (Canberra_FOUND)
   set(knotifications_SRCS ${knotifications_SRCS}
   notifybyaudio_canberra.cpp)
@@ -117,7 +122,7 @@ if(X11_FOUND)
 endif()
 
 if(APPLE)
-  target_link_libraries(KF5Notifications PRIVATE Qt5::MacExtras)
+  target_link_libraries(KF5Notifications PRIVATE Qt5::MacExtras "-framework Foundation")
 endif()
 
 if(X11_XTest_FOUND)

@@ -40,11 +40,14 @@
 #include "notifybylogfile.h"
 #include "notifybytaskbar.h"
 #include "notifybyexecute.h"
-#ifndef Q_OS_ANDROID
+#ifdef Q_OS_ANDROID
+#include "notifybyandroid.h"
+#elif defined(Q_OS_MAC)
+#include "notifybymacosnotificationcenter.h"
+#else
 #include "notifybypopup.h"
 #include "notifybyportal.h"
-#else
-#include "notifybyandroid.h"
+#include <iostream>
 #endif
 #include "debug_p.h"
 
@@ -133,14 +136,17 @@ KNotificationPlugin *KNotificationManager::pluginForAction(const QString &action
     // We have a series of built-ins up first, and fall back to trying
     // to instantiate an externally supplied plugin.
     if (action == QLatin1String("Popup")) {
-#ifndef Q_OS_ANDROID
-            if (d->portalDBusServiceExists) {
-                plugin = new NotifyByPortal(this);
-            } else {
-                plugin = new NotifyByPopup(this);
-            }
-#else
+#ifdef Q_OS_ANDROID
         plugin = new NotifyByAndroid(this);
+#elif defined(Q_OS_MAC)
+        plugin = new NotifyByMacOSNotificationCenter(this);
+#else
+        std::cout << "Not loaded macOS" << std::endl;
+        if (d->portalDBusServiceExists) {
+            plugin = new NotifyByPortal(this);
+        } else {
+            plugin = new NotifyByPopup(this);
+        }
 #endif
 
         addPlugin(plugin);
