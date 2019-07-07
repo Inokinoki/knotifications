@@ -3,26 +3,12 @@
 #include "knotifyconfig.h"
 #include "debug_p.h"
 
-#include <QBuffer>
 #include <QIcon>
 #include <QLoggingCategory>
-#include <QCoreApplication>
 #include <QDebug>
 
 #include <Foundation/Foundation.h>
 #import <objc/runtime.h>
-
-// @interface KNotificationWrapper : NSObject
-// @property KNotification *notification;
-// - (id) initWithKNotification: (KNotification *) knotification;
-// @end
-
-// @implementation KNotificationWrapper
-// - (id) initWithKNotification: (KNotification *) knotification {
-//     _notification = knotification;
-//     return self;
-// }
-// @end
 
 class MacOSNotificationCenterPrivate
 {
@@ -61,7 +47,6 @@ static MacOSNotificationCenterPrivate macosNotificationCenterPrivate;
 
 - (void) userNotificationCenter:(NSUserNotificationCenter *)center didActivateNotification:(NSUserNotification *)notification
 {
-    // TO-DO: actions
     KNotification *originNotification;
     NSLog(@"User clicked on notification %d, internal Id: %d", [notification.userInfo[@"id"] intValue], [notification.userInfo[@"internalId"] intValue]);
     switch (notification.activationType) {
@@ -78,11 +63,7 @@ static MacOSNotificationCenterPrivate macosNotificationCenterPrivate;
             NSLog(@"AdditionalAction clicked %@", notification.additionalActivationAction.identifier);
             originNotification = macosNotificationCenterPrivate.getKNotification([notification.userInfo[@"internalId"] intValue]);
             if (!originNotification) break;
-
             emit originNotification->activate([notification.additionalActivationAction.identifier intValue] + 1);
-            // notificationWrapper = notification.userInfo[@"originNotification"];
-            // emit notificationWrapper.notification->activate([notification.additionalActivationAction.identifier intValue]);
-            // emit [notification.additionalActivationAction.identifier intValue];
             break;
         default:
             NSLog(@"Other clicked");
@@ -133,20 +114,11 @@ NotifyByMacOSNotificationCenter::NotifyByMacOSNotificationCenter (QObject* paren
     : KNotificationPlugin(parent)
 {
     qCDebug(LOG_KNOTIFICATIONS) << "Knotification macos backend created";
-    //m_delegate = [MacOSNotificationCenterDelegate alloc];
-    //[[NSUserNotificationCenter defaultUserNotificationCenter] setDelegate:m_delegate];
-    //m_macosNotificationCenter = new MacOSNotificationCenterPrivate();
 }
 
 NotifyByMacOSNotificationCenter::~NotifyByMacOSNotificationCenter () 
 {
     qCDebug(LOG_KNOTIFICATIONS) << "Knotification macos backend deleted";
-    // [[NSUserNotificationCenter defaultUserNotificationCenter] setDelegate:nil];
-    // [m_delegate release];
-    //if (m_macosNotificationCenter != nullptr) {
-    //    delete m_macosNotificationCenter;
-    //    m_macosNotificationCenter = nullptr;
-    //}
 }
 
 void NotifyByMacOSNotificationCenter::notify(KNotification *notification, KNotifyConfig *config)
@@ -170,43 +142,21 @@ void NotifyByMacOSNotificationCenter::notify(KNotification *notification, KNotif
     NSLog(@"Action size %d", notification->actions().length());
     NSLog(@"Default action: %s", notification->defaultAction().toStdString().c_str());
 
-    //id value = ;
-    //[osxNotification setValue:value forKey: @"_alwaysShowAlternateActionMenu"];
-
-    //osxNotification.hasReplyButton = true;
     if (!notification->actions().isEmpty()) {
         osxNotification.hasActionButton = true;
         // Workaround: this "API" will cause refuse from Apple
         [osxNotification setValue:[NSNumber numberWithBool:YES] forKey: @"_alwaysShowAlternateActionMenu"];
 
-        // if (notification->actions().length() == 1) {
-        //     // This will be autoreleased, set by Qt
-        //     osxNotification.additionalActivationAction = 
-        //         [NSUserNotificationAction actionWithIdentifier: @"-1" title: notification->actions().at(0).toNSString()];
-        // } else {
-            // Allocate action list
-            NSMutableArray<NSUserNotificationAction*> *actions = [[NSMutableArray alloc] init];
-            for (int index = 0; index < notification->actions().length(); index++) {
-                NSUserNotificationAction *action =
-                    [NSUserNotificationAction actionWithIdentifier: [NSString stringWithFormat:@"%d", index] 
-                                              title: notification->actions().at(index).toNSString()];
-                [actions addObject: action];
-            }
-            osxNotification.additionalActions = actions;
-        //}
+        // Construct a list for all actions
+        NSMutableArray<NSUserNotificationAction*> *actions = [[NSMutableArray alloc] init];
+        for (int index = 0; index < notification->actions().length(); index++) {
+            NSUserNotificationAction *action =
+                [NSUserNotificationAction actionWithIdentifier: [NSString stringWithFormat:@"%d", index] 
+                                            title: notification->actions().at(index).toNSString()];
+            [actions addObject: action];
+        }
+        osxNotification.additionalActions = actions;
     }
-    // osxNotification.hasActionButton = true;
-    // NSMutableArray<NSUserNotificationAction*> *actions = [[NSMutableArray alloc] init];
-    // NSUserNotificationAction *action1 = [NSUserNotificationAction actionWithIdentifier: @"0" title: @"Action 1"];
-    // NSUserNotificationAction *action2 = [NSUserNotificationAction actionWithIdentifier: @"1" title: @"Action 2"];
-    // NSUserNotificationAction *action3 = [NSUserNotificationAction actionWithIdentifier: @"2" title: @"Action 3"];
-    // [actions addObject: action1];
-    // [actions addObject: action2];
-    // [actions addObject: action3];
-    
-    // osxNotification.additionalActions = actions;
-
-    // m_macosNotificationCenter->m_notifications.insert(notification->id(), osxNotification);
 
     [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification: osxNotification];
 
