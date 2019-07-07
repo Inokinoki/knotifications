@@ -3,7 +3,7 @@
 
 #include "knotificationplugin.h"
 
-// class MacOSNotificationCenterPrivate;
+class MacOSNotificationCenterPrivate;
 
 class NotifyByMacOSNotificationCenter : public KNotificationPlugin
 {
@@ -17,8 +17,8 @@ public:
     void notify(KNotification *notification, KNotifyConfig *config) override;
     void update(KNotification *notification, KNotifyConfig *config) override;
     void close(KNotification *notification) override;
-// private:
-//     MacOSNotificationCenterPrivate *m_macosNotificationCenter;
+//private:
+//    MacOSNotificationCenterPrivate *m_macosNotificationCenter;
 };
 
 #endif // NOTIFYBYMACOSNOTIFICATIONCENTER_H

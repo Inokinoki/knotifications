@@ -12,32 +12,37 @@
 #include <Foundation/Foundation.h>
 #import <objc/runtime.h>
 
-@interface KNotificationWrapper : NSObject
-@property KNotification *notification;
-- (id) initWithKNotification: (KNotification *) knotification;
-@end
+// @interface KNotificationWrapper : NSObject
+// @property KNotification *notification;
+// - (id) initWithKNotification: (KNotification *) knotification;
+// @end
 
-@implementation KNotificationWrapper
-- (id) initWithKNotification: (KNotification *) knotification {
-    _notification = knotification;
-    return self;
-}
-@end
-// class MacOSNotificationCenterPrivate
-// {
-// public:
-//     MacOSNotificationCenterPrivate();
-//     ~MacOSNotificationCenterPrivate();
+// @implementation KNotificationWrapper
+// - (id) initWithKNotification: (KNotification *) knotification {
+//     _notification = knotification;
+//     return self;
+// }
+// @end
 
-//     //void addNotification(NSUserNotification *notification);
-//     //void removeNotification();
-// private:
-//     QMap<int, NSUserNotification*> m_notifications;
-//     friend class NotifyByMacOSNotificationCenter;
-// };
-//
-// static MacOSNotificationCenterPrivate macOSNotificationCenterPrivate;
-id m_delegate;
+class MacOSNotificationCenterPrivate
+{
+public:
+    MacOSNotificationCenterPrivate();
+    ~MacOSNotificationCenterPrivate();
+
+    void insertKNotification(int internalId, KNotification *notification);
+    KNotification *takeKNotification(int internalId);
+    const KNotification *takeKNotification(int internalId) const;
+
+    int generateInternalId() { return m_internalCounter++; }
+private:
+    id m_delegate;
+
+    int m_internalCounter;
+    QMap<int, KNotification*> m_notifications;
+};
+
+static MacOSNotificationCenterPrivate macosNotificationCenterPrivate;
 
 @interface MacOSNotificationCenterDelegate : NSObject<NSUserNotificationCenterDelegate> {}
 @end
@@ -56,8 +61,8 @@ id m_delegate;
 - (void) userNotificationCenter:(NSUserNotificationCenter *)center didActivateNotification:(NSUserNotification *)notification
 {
     // TO-DO: actions
-    KNotificationWrapper *notificationWrapper;
-    NSLog(@"User clicked on notification %d", [notification.userInfo[@"id"] intValue]);
+    KNotification *originNotification;
+    NSLog(@"User clicked on notification %d, internal Id: %d", [notification.userInfo[@"id"] intValue], [notification.userInfo[@"internalId"] intValue]);
     switch (notification.activationType) {
         case NSUserNotificationActivationTypeReplied:
             NSLog(@"Replied clicked");
@@ -70,8 +75,12 @@ id m_delegate;
             break;
         case NSUserNotificationActivationTypeAdditionalActionClicked:
             NSLog(@"AdditionalAction clicked %@", notification.additionalActivationAction.identifier);
-            notificationWrapper = notification.userInfo[@"originNotification"];
-            emit notificationWrapper.notification->activate([notification.additionalActivationAction.identifier intValue]);
+            originNotification = macosNotificationCenterPrivate.takeKNotification([notification.userInfo[@"internalId"] intValue]);
+            if (!originNotification) break;
+
+            emit originNotification->activate([notification.additionalActivationAction.identifier intValue] + 1);
+            // notificationWrapper = notification.userInfo[@"originNotification"];
+            // emit notificationWrapper.notification->activate([notification.additionalActivationAction.identifier intValue]);
             // emit [notification.additionalActivationAction.identifier intValue];
             break;
         default:
@@ -81,50 +90,74 @@ id m_delegate;
 }
 @end
 
-// MacOSNotificationCenterPrivate::MacOSNotificationCenterPrivate()
-// {
-//     // Set delegate
-//     m_delegate = [MacOSNotificationCenterDelegate alloc];
-//     [[NSUserNotificationCenter defaultUserNotificationCenter] setDelegate:m_delegate];
-// }
+MacOSNotificationCenterPrivate::MacOSNotificationCenterPrivate()
+{
+    // Set delegate
+    m_delegate = [MacOSNotificationCenterDelegate alloc];
+    [[NSUserNotificationCenter defaultUserNotificationCenter] setDelegate:m_delegate];
 
-// MacOSNotificationCenterPrivate::~MacOSNotificationCenterPrivate()
-// {
-//     [m_delegate release];
-// }
+    // Init internal notification counter
+    m_internalCounter = 0;
+}
+
+MacOSNotificationCenterPrivate::~MacOSNotificationCenterPrivate()
+{
+    [[NSUserNotificationCenter defaultUserNotificationCenter] setDelegate: nil];
+    [m_delegate release];
+}
+
+void MacOSNotificationCenterPrivate::insertKNotification(int internalId, KNotification *notification)
+{
+    if (!notification) return;
+
+    m_notifications.insert(internalId, notification);
+}
+
+KNotification *MacOSNotificationCenterPrivate::takeKNotification(int internalId)
+{
+    return m_notifications[internalId];
+}
+
+const KNotification *MacOSNotificationCenterPrivate::takeKNotification(int internalId) const
+{
+    return m_notifications[internalId];
+}
 
 NotifyByMacOSNotificationCenter::NotifyByMacOSNotificationCenter (QObject* parent) 
     : KNotificationPlugin(parent)
 {
     qCDebug(LOG_KNOTIFICATIONS) << "Knotification macos backend created";
-    m_delegate = [MacOSNotificationCenterDelegate alloc];
-    [[NSUserNotificationCenter defaultUserNotificationCenter] setDelegate:m_delegate];
+    //m_delegate = [MacOSNotificationCenterDelegate alloc];
+    //[[NSUserNotificationCenter defaultUserNotificationCenter] setDelegate:m_delegate];
     //m_macosNotificationCenter = new MacOSNotificationCenterPrivate();
 }
 
 NotifyByMacOSNotificationCenter::~NotifyByMacOSNotificationCenter () 
 {
     qCDebug(LOG_KNOTIFICATIONS) << "Knotification macos backend deleted";
-    [[NSUserNotificationCenter defaultUserNotificationCenter] setDelegate:nil];
-    [m_delegate release];
-    // if (m_macosNotificationCenter != nullptr) {
-    //     delete m_macosNotificationCenter;
-    //     m_macosNotificationCenter = nullptr;
-    // }
+    // [[NSUserNotificationCenter defaultUserNotificationCenter] setDelegate:nil];
+    // [m_delegate release];
+    //if (m_macosNotificationCenter != nullptr) {
+    //    delete m_macosNotificationCenter;
+    //    m_macosNotificationCenter = nullptr;
+    //}
 }
 
 void NotifyByMacOSNotificationCenter::notify(KNotification *notification, KNotifyConfig *config)
 {
     qCDebug(LOG_KNOTIFICATIONS) <<  "Test notification " << notification->id();
+
+    int internalId = macosNotificationCenterPrivate.generateInternalId();
     NSUserNotification *osxNotification = [[[NSUserNotification alloc] init] autorelease];
-    NSString *notificationId = [NSString stringWithFormat:@"%d", notification->id()];
+    NSString *notificationId = [NSString stringWithFormat: @"%d", notification->id()],
+             *internalNotificationId = [NSString stringWithFormat: @"%d", internalId];
 
     CFStringRef cfTitle = notification->title().toCFString(),
                 cfText = notification->text().toCFString();
 
     osxNotification.title = [NSString stringWithString: (NSString *)cfTitle];
-    osxNotification.userInfo = [NSDictionary dictionaryWithObjectsAndKeys: notificationId, @"id", nil];
-        //[[KNotificationWrapper alloc] initWithKNotification: notification], @"originNotification", nil];
+    osxNotification.userInfo = [NSDictionary dictionaryWithObjectsAndKeys: notificationId, @"id",
+        internalNotificationId, @"internalId", nil];
     osxNotification.informativeText = [NSString stringWithString: (NSString *)cfText];
     // osxNotification.contentImage = [NSImage contentsOfURL: [NSURL string: notification->iconName().toStdString().c_str()]];
 
@@ -148,7 +181,7 @@ void NotifyByMacOSNotificationCenter::notify(KNotification *notification, KNotif
             // Allocate action list
             NSMutableArray<NSUserNotificationAction*> *actions = [[NSMutableArray alloc] init];
             for (int index = 0; index < notification->actions().length(); index++) {
-                NSUserNotificationAction *action = 
+                NSUserNotificationAction *action =
                     [NSUserNotificationAction actionWithIdentifier: [NSString stringWithFormat:@"%d", index] 
                                               title: notification->actions().at(index).toNSString()];
                 [actions addObject: action];
@@ -170,6 +203,8 @@ void NotifyByMacOSNotificationCenter::notify(KNotification *notification, KNotif
     // m_macosNotificationCenter->m_notifications.insert(notification->id(), osxNotification);
 
     [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification: osxNotification];
+
+    macosNotificationCenterPrivate.insertKNotification(internalId, notification);
 
     CFRelease(cfTitle);
     CFRelease(cfText);
