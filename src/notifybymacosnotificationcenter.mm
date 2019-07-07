@@ -172,7 +172,7 @@ void NotifyByMacOSNotificationCenter::notify(KNotification *notification, KNotif
     } else {
         osxNotification.hasActionButton = true;
         // Workaround: this "API" will cause refuse from Apple
-        [osxNotification setValue:[NSNumber numberWithBool:YES] forKey: @"_alwaysShowAlternateActionMenu"];
+        // [osxNotification setValue:[NSNumber numberWithBool:YES] forKey: @"_alwaysShowAlternateActionMenu"];
 
         // Construct a list for all actions
         NSMutableArray<NSUserNotificationAction*> *actions = [[NSMutableArray alloc] init];
