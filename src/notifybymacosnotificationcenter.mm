@@ -31,8 +31,8 @@ public:
     ~MacOSNotificationCenterPrivate();
 
     void insertKNotification(int internalId, KNotification *notification);
-    KNotification *takeKNotification(int internalId);
-    const KNotification *takeKNotification(int internalId) const;
+    KNotification *getKNotification(int internalId);
+    const KNotification *getKNotification(int internalId) const;
 
     int generateInternalId() { return m_internalCounter++; }
 private:
@@ -75,7 +75,7 @@ static MacOSNotificationCenterPrivate macosNotificationCenterPrivate;
             break;
         case NSUserNotificationActivationTypeAdditionalActionClicked:
             NSLog(@"AdditionalAction clicked %@", notification.additionalActivationAction.identifier);
-            originNotification = macosNotificationCenterPrivate.takeKNotification([notification.userInfo[@"internalId"] intValue]);
+            originNotification = macosNotificationCenterPrivate.getKNotification([notification.userInfo[@"internalId"] intValue]);
             if (!originNotification) break;
 
             emit originNotification->activate([notification.additionalActivationAction.identifier intValue] + 1);
@@ -113,12 +113,12 @@ void MacOSNotificationCenterPrivate::insertKNotification(int internalId, KNotifi
     m_notifications.insert(internalId, notification);
 }
 
-KNotification *MacOSNotificationCenterPrivate::takeKNotification(int internalId)
+KNotification *MacOSNotificationCenterPrivate::getKNotification(int internalId)
 {
     return m_notifications[internalId];
 }
 
-const KNotification *MacOSNotificationCenterPrivate::takeKNotification(int internalId) const
+const KNotification *MacOSNotificationCenterPrivate::getKNotification(int internalId) const
 {
     return m_notifications[internalId];
 }
