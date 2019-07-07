@@ -87,6 +87,18 @@ MacOSNotificationCenterPrivate::~MacOSNotificationCenterPrivate()
 {
     [[NSUserNotificationCenter defaultUserNotificationCenter] setDelegate: nil];
     [m_delegate release];
+
+    // Try to finish all KNotification
+    for (KNotification *notification : m_notifications.values()) {
+        notification->deref();
+    }
+
+    // Try to finish all NSNotification
+    NSArray<NSUserNotification *> *deliveredNotifications = [NSUserNotificationCenter defaultUserNotificationCenter].deliveredNotifications;
+    for (NSUserNotification *deliveredNotification in deliveredNotifications) {
+        // Remove NSNotification in notification center
+        [[NSUserNotificationCenter defaultUserNotificationCenter] removeDeliveredNotification: deliveredNotification];
+    }
 }
 
 void MacOSNotificationCenterPrivate::insertKNotification(int internalId, KNotification *notification)
