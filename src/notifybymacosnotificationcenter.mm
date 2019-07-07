@@ -132,6 +132,13 @@ void MacOSNotificationCenterPrivate::removeKNotification(int internalId)
 NotifyByMacOSNotificationCenter::NotifyByMacOSNotificationCenter (QObject* parent) 
     : KNotificationPlugin(parent)
 {
+    // Clear notifications
+    NSArray<NSUserNotification *> *deliveredNotifications = [NSUserNotificationCenter defaultUserNotificationCenter].deliveredNotifications;
+    for (NSUserNotification *deliveredNotification in deliveredNotifications) {
+        // Remove NSNotification in notification center
+        [[NSUserNotificationCenter defaultUserNotificationCenter] removeDeliveredNotification: deliveredNotification];
+    }
+
     qCDebug(LOG_KNOTIFICATIONS) << "Knotification macos backend created";
 }
 
