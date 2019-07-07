@@ -33,6 +33,7 @@ public:
     void insertKNotification(int internalId, KNotification *notification);
     KNotification *getKNotification(int internalId);
     const KNotification *getKNotification(int internalId) const;
+    KNotification *takeKNotification(int internalId);
 
     int generateInternalId() { return m_internalCounter++; }
 private:
@@ -121,6 +122,11 @@ KNotification *MacOSNotificationCenterPrivate::getKNotification(int internalId)
 const KNotification *MacOSNotificationCenterPrivate::getKNotification(int internalId) const
 {
     return m_notifications[internalId];
+}
+
+KNotification *MacOSNotificationCenterPrivate::getKNotification(int internalId)
+{
+    return m_notifications.take(internalId);
 }
 
 NotifyByMacOSNotificationCenter::NotifyByMacOSNotificationCenter (QObject* parent) 
