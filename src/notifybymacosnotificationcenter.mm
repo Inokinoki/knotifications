@@ -158,9 +158,6 @@ void NotifyByMacOSNotificationCenter::notify(KNotification *notification, KNotif
     osxNotification.informativeText = [NSString stringWithString: (NSString *)cfText];
     osxNotification.contentImage = QtMac::toNSImage(notification->pixmap());
 
-    NSLog(@"Action size %d", notification->actions().length());
-    NSLog(@"Default action: %s", notification->defaultAction().toStdString().c_str());
-
     if (notification->actions().isEmpty()) {
         // Remove all buttons
         osxNotification.hasReplyButton = false;
@@ -175,7 +172,7 @@ void NotifyByMacOSNotificationCenter::notify(KNotification *notification, KNotif
         for (int index = 0; index < notification->actions().length(); index++) {
             NSUserNotificationAction *action =
                 [NSUserNotificationAction actionWithIdentifier: [NSString stringWithFormat:@"%d", index] 
-                                            title: notification->actions().at(index).toNSString()];
+                                          title: notification->actions().at(index).toNSString()];
             [actions addObject: action];
         }
         osxNotification.additionalActions = actions;
@@ -196,7 +193,6 @@ void NotifyByMacOSNotificationCenter::close(KNotification *notification)
     NSArray<NSUserNotification *> *deliveredNotifications = [NSUserNotificationCenter defaultUserNotificationCenter].deliveredNotifications;
     for (NSUserNotification *deliveredNotification in deliveredNotifications) {
         if ([deliveredNotification.userInfo[@"id"] intValue] == notification->id()) {
-            NSLog(@"Remove notification %d %d", [deliveredNotification.userInfo[@"id"] intValue], [deliveredNotification.userInfo[@"internalId"] intValue]);
             // Remove KNotification in mapping
             int internalId = [deliveredNotification.userInfo[@"id"] intValue];
             macosNotificationCenterPrivate.removeKNotification(internalId);
