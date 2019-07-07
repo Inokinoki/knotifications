@@ -42,7 +42,6 @@ endif()
 ecm_qt_declare_logging_category(knotifications_SRCS HEADER debug_p.h IDENTIFIER LOG_KNOTIFICATIONS CATEGORY_NAME org.kde.knotifications)
 
 if (APPLE)
-  message("Is Apple")
   list(APPEND knotifications_SRCS notifybymacosnotificationcenter.mm)
 endif()
 
