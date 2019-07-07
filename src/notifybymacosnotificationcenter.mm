@@ -6,6 +6,7 @@
 #include <QIcon>
 #include <QLoggingCategory>
 #include <QDebug>
+#include <QtMac>
 
 #include <Foundation/Foundation.h>
 #import <objc/runtime.h>
@@ -155,7 +156,7 @@ void NotifyByMacOSNotificationCenter::notify(KNotification *notification, KNotif
     osxNotification.userInfo = [NSDictionary dictionaryWithObjectsAndKeys: notificationId, @"id",
         internalNotificationId, @"internalId", nil];
     osxNotification.informativeText = [NSString stringWithString: (NSString *)cfText];
-    // osxNotification.contentImage = [NSImage contentsOfURL: [NSURL string: notification->iconName().toStdString().c_str()]];
+    osxNotification.contentImage = QtMac::toNSImage(notification->pixmap());
 
     NSLog(@"Action size %d", notification->actions().length());
     NSLog(@"Default action: %s", notification->defaultAction().toStdString().c_str());
