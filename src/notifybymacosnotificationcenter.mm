@@ -161,7 +161,11 @@ void NotifyByMacOSNotificationCenter::notify(KNotification *notification, KNotif
     NSLog(@"Action size %d", notification->actions().length());
     NSLog(@"Default action: %s", notification->defaultAction().toStdString().c_str());
 
-    if (!notification->actions().isEmpty()) {
+    if (notification->actions().isEmpty()) {
+        // Remove all buttons
+        osxNotification.hasReplyButton = false;
+        osxNotification.hasActionButton = false;
+    } else {
         osxNotification.hasActionButton = true;
         // Workaround: this "API" will cause refuse from Apple
         [osxNotification setValue:[NSNumber numberWithBool:YES] forKey: @"_alwaysShowAlternateActionMenu"];
