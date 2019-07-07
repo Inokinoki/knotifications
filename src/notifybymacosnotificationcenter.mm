@@ -20,6 +20,7 @@ public:
     KNotification *getKNotification(int internalId);
     const KNotification *getKNotification(int internalId) const;
     KNotification *takeKNotification(int internalId);
+    void removeKNotification(int internalId);
 
     int generateInternalId() { return m_internalCounter++; }
 private:
@@ -105,9 +106,14 @@ const KNotification *MacOSNotificationCenterPrivate::getKNotification(int intern
     return m_notifications[internalId];
 }
 
-KNotification *MacOSNotificationCenterPrivate::getKNotification(int internalId)
+KNotification *MacOSNotificationCenterPrivate::takeKNotification(int internalId)
 {
     return m_notifications.take(internalId);
+}
+
+void MacOSNotificationCenterPrivate::removeKNotification(int internalId)
+{
+    m_notifications.remove(internalId);
 }
 
 NotifyByMacOSNotificationCenter::NotifyByMacOSNotificationCenter (QObject* parent) 
@@ -173,9 +179,13 @@ void NotifyByMacOSNotificationCenter::close(KNotification *notification)
     NSArray<NSUserNotification *> *deliveredNotifications = [NSUserNotificationCenter defaultUserNotificationCenter].deliveredNotifications;
     for (NSUserNotification *deliveredNotification in deliveredNotifications) {
         if ([deliveredNotification.userInfo[@"id"] intValue] == notification->id()) {
-            qCDebug(LOG_KNOTIFICATIONS) <<  "Try to remove notification " << notification->id();
+            NSLog(@"Remove notification %d %d", [deliveredNotification.userInfo[@"id"] intValue], [deliveredNotification.userInfo[@"internalId"] intValue]);
+            // Remove KNotification in mapping
+            int internalId = [deliveredNotification.userInfo[@"id"] intValue];
+            macosNotificationCenterPrivate.removeKNotification(internalId);
+
+            // Remove NSNotification in notification center
             [[NSUserNotificationCenter defaultUserNotificationCenter] removeDeliveredNotification: deliveredNotification];
-            qCDebug(LOG_KNOTIFICATIONS) <<  "Removed notification " << notification->id();
             finish(notification);
             return;
         }
