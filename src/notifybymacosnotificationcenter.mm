@@ -44,31 +44,31 @@ static MacOSNotificationCenterPrivate macosNotificationCenterPrivate;
 
 - (void)userNotificationCenter:(NSUserNotificationCenter *)center didDeliverNotification:(NSUserNotification *)notification
 {
-    NSLog(@"Send notification %d", [notification.userInfo[@"id"] intValue]);
+    qCDebug(LOG_KNOTIFICATIONS) << "Send notification " << [notification.userInfo[@"id"] intValue];
 }
 
 - (void) userNotificationCenter:(NSUserNotificationCenter *)center didActivateNotification:(NSUserNotification *)notification
 {
     KNotification *originNotification;
-    NSLog(@"User clicked on notification %d, internal Id: %d", [notification.userInfo[@"id"] intValue], [notification.userInfo[@"internalId"] intValue]);
+    qCDebug(LOG_KNOTIFICATIONS) << "User clicked on notification " <<  << ", internal Id: " << [notification.userInfo[@"id"] intValue], [notification.userInfo[@"internalId"] intValue]);
     switch (notification.activationType) {
         case NSUserNotificationActivationTypeReplied:
-            NSLog(@"Replied clicked");
+            qCDebug(LOG_KNOTIFICATIONS) << "Replied clicked";
             break;
         case NSUserNotificationActivationTypeContentsClicked:
-            NSLog(@"Contents clicked");
+            qCDebug(LOG_KNOTIFICATIONS) << "Contents clicked";
             break;
         case NSUserNotificationActivationTypeActionButtonClicked:
-            NSLog(@"ActionButton clicked");
+            qCDebug(LOG_KNOTIFICATIONS) << "ActionButton clicked";
             break;
         case NSUserNotificationActivationTypeAdditionalActionClicked:
-            NSLog(@"AdditionalAction clicked %@", notification.additionalActivationAction.identifier);
+            qCDebug(LOG_KNOTIFICATIONS) << "AdditionalAction clicked";
             originNotification = macosNotificationCenterPrivate.getKNotification([notification.userInfo[@"internalId"] intValue]);
             if (!originNotification) break;
             emit originNotification->activate([notification.additionalActivationAction.identifier intValue] + 1);
             break;
         default:
-            NSLog(@"Other clicked");
+            qCDebug(LOG_KNOTIFICATIONS) << "Other clicked";
             break;
     }
 }
