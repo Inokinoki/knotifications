@@ -50,7 +50,10 @@ static MacOSNotificationCenterPrivate macosNotificationCenterPrivate;
 - (void) userNotificationCenter:(NSUserNotificationCenter *)center didActivateNotification:(NSUserNotification *)notification
 {
     KNotification *originNotification;
-    qCDebug(LOG_KNOTIFICATIONS) << "User clicked on notification " <<  << ", internal Id: " << [notification.userInfo[@"id"] intValue], [notification.userInfo[@"internalId"] intValue]);
+    qCDebug(LOG_KNOTIFICATIONS) << "User clicked on notification " 
+        << [notification.userInfo[@"id"] intValue] 
+        << ", internal Id: " 
+        << [notification.userInfo[@"internalId"] intValue];
     switch (notification.activationType) {
         case NSUserNotificationActivationTypeReplied:
             qCDebug(LOG_KNOTIFICATIONS) << "Replied clicked";
