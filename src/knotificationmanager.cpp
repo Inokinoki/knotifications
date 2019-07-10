@@ -47,7 +47,6 @@
 #else
 #include "notifybypopup.h"
 #include "notifybyportal.h"
-#include <iostream>
 #endif
 #include "debug_p.h"
 
@@ -141,7 +140,6 @@ KNotificationPlugin *KNotificationManager::pluginForAction(const QString &action
 #elif defined(Q_OS_MAC)
         plugin = new NotifyByMacOSNotificationCenter(this);
 #else
-        std::cout << "Not loaded macOS" << std::endl;
         if (d->portalDBusServiceExists) {
             plugin = new NotifyByPortal(this);
         } else {
