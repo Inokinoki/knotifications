@@ -17,8 +17,6 @@ public:
     void notify(KNotification *notification, KNotifyConfig *config) override;
     void update(KNotification *notification, KNotifyConfig *config) override;
     void close(KNotification *notification) override;
-//private:
-//    MacOSNotificationCenterPrivate *m_macosNotificationCenter;
 };
 
 #endif // NOTIFYBYMACOSNOTIFICATIONCENTER_H
