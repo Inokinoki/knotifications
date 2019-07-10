@@ -37,7 +37,7 @@ static MacOSNotificationCenterPrivate macosNotificationCenterPrivate;
 @end
 
 @implementation MacOSNotificationCenterDelegate
-- (BOOL)userNotificationCenter:(NSUserNotificationCenter *)center shouldPresentNotification:(NSUserNotification *)notification 
+- (BOOL)userNotificationCenter:(NSUserNotificationCenter *)center shouldPresentNotification:(NSUserNotification *)notification
 {
     return YES;
 }
@@ -129,7 +129,7 @@ void MacOSNotificationCenterPrivate::removeKNotification(int internalId)
     m_notifications.remove(internalId);
 }
 
-NotifyByMacOSNotificationCenter::NotifyByMacOSNotificationCenter (QObject* parent) 
+NotifyByMacOSNotificationCenter::NotifyByMacOSNotificationCenter(QObject* parent)
     : KNotificationPlugin(parent)
 {
     // Clear notifications
@@ -142,7 +142,7 @@ NotifyByMacOSNotificationCenter::NotifyByMacOSNotificationCenter (QObject* paren
     qCDebug(LOG_KNOTIFICATIONS) << "Knotification macos backend created";
 }
 
-NotifyByMacOSNotificationCenter::~NotifyByMacOSNotificationCenter () 
+NotifyByMacOSNotificationCenter::~NotifyByMacOSNotificationCenter()
 {
     qCDebug(LOG_KNOTIFICATIONS) << "Knotification macos backend deleted";
 }
@@ -178,7 +178,7 @@ void NotifyByMacOSNotificationCenter::notify(KNotification *notification, KNotif
         NSMutableArray<NSUserNotificationAction*> *actions = [[NSMutableArray alloc] init];
         for (int index = 0; index < notification->actions().length(); index++) {
             NSUserNotificationAction *action =
-                [NSUserNotificationAction actionWithIdentifier: [NSString stringWithFormat:@"%d", index] 
+                [NSUserNotificationAction actionWithIdentifier: [NSString stringWithFormat:@"%d", index]
                                           title: notification->actions().at(index).toNSString()];
             [actions addObject: action];
         }
