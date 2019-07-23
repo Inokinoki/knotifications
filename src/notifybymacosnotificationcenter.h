@@ -3,15 +3,13 @@
 
 #include "knotificationplugin.h"
 
-class MacOSNotificationCenterPrivate;
-
 class NotifyByMacOSNotificationCenter : public KNotificationPlugin
 {
     Q_OBJECT
 
 public:
     NotifyByMacOSNotificationCenter(QObject* parent);
-    ~NotifyByMacOSNotificationCenter();
+    ~NotifyByMacOSNotificationCenter() override;
 
     QString optionName() override { return QStringLiteral("Popup"); }
     void notify(KNotification *notification, KNotifyConfig *config) override;

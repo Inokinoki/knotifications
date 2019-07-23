@@ -121,7 +121,7 @@ if(X11_FOUND)
 endif()
 
 if(APPLE)
-  target_link_libraries(KF5Notifications PRIVATE Qt5::MacExtras "-framework Foundation -framework AppKit")
+  target_link_libraries(KF5Notifications PRIVATE Qt5::MacExtras "-framework Foundation" "-framework AppKit")
 endif()
 
 if(X11_XTest_FOUND)
