@@ -7,7 +7,7 @@
 #include <QDebug>
 #include <QtMac>
 
-#include <Foundation/Foundation.h>
+#import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 
 Q_FORWARD_DECLARE_OBJC_CLASS(MacOSNotificationCenterDelegate);
@@ -15,17 +15,17 @@ Q_FORWARD_DECLARE_OBJC_CLASS(MacOSNotificationCenterDelegate);
 class MacOSNotificationCenterPrivate
 {
 public:
-    MacOSNotificationCenterPrivate();
+    static MacOSNotificationCenterPrivate *instance();
     ~MacOSNotificationCenterPrivate();
 
     QMap<int, KNotification*> m_notifications;
 
     int m_internalCounter;
 private:
+    MacOSNotificationCenterPrivate();
     MacOSNotificationCenterDelegate *m_delegate;
+    static MacOSNotificationCenterPrivate *m_instance;
 };
-
-Q_GLOBAL_STATIC(MacOSNotificationCenterPrivate, macosNotificationCenterPrivate)
 
 @interface MacOSNotificationCenterDelegate : NSObject<NSUserNotificationCenterDelegate> {}
 @end
@@ -53,17 +53,13 @@ Q_GLOBAL_STATIC(MacOSNotificationCenterPrivate, macosNotificationCenterPrivate)
         << ", internal Id: "
         << [notification.userInfo[@"internalId"] intValue];
 
-    if (macosNotificationCenterPrivate.exists()) {
-        return;
-    }
-
     switch (notification.activationType) {
     case NSUserNotificationActivationTypeReplied:
         qCDebug(LOG_KNOTIFICATIONS) << "Replied clicked";
         break;
     case NSUserNotificationActivationTypeContentsClicked: {
-            qCDebug(LOG_KNOTIFICATIONS) << "Contents clicked";
-            KNotification *originNotification = macosNotificationCenterPrivate->m_notifications.value([notification.userInfo[@"internalId"] intValue]);
+            qCDebug(LOG_KNOTIFICATIONS) << "Content clicked";
+            KNotification *originNotification = MacOSNotificationCenterPrivate::instance()->m_notifications.value([notification.userInfo[@"internalId"] intValue]);
             if (!originNotification || originNotification->defaultAction().isNull()) {
                 break;
             }
@@ -71,8 +67,8 @@ Q_GLOBAL_STATIC(MacOSNotificationCenterPrivate, macosNotificationCenterPrivate)
         }
         break;
     case NSUserNotificationActivationTypeActionButtonClicked: {
-            qCDebug(LOG_KNOTIFICATIONS) << "ActionButton clicked";
-            KNotification *originNotification = macosNotificationCenterPrivate->m_notifications.value([notification.userInfo[@"internalId"] intValue]);
+            qCDebug(LOG_KNOTIFICATIONS) << "Main action clicked";
+            KNotification *originNotification = MacOSNotificationCenterPrivate::instance()->m_notifications.value([notification.userInfo[@"internalId"] intValue]);
             if (!originNotification) {
                 break;
             }
@@ -80,8 +76,8 @@ Q_GLOBAL_STATIC(MacOSNotificationCenterPrivate, macosNotificationCenterPrivate)
         }
         break;
     case NSUserNotificationActivationTypeAdditionalActionClicked: {
-            qCDebug(LOG_KNOTIFICATIONS) << "Additional ActionButton clicked";
-            KNotification *originNotification = macosNotificationCenterPrivate->m_notifications.value([notification.userInfo[@"internalId"] intValue]);
+            qCDebug(LOG_KNOTIFICATIONS) << "Additional action clicked";
+            KNotification *originNotification = MacOSNotificationCenterPrivate::instance()->m_notifications.value([notification.userInfo[@"internalId"] intValue]);
             if (!originNotification) {
                 break;
             }
@@ -94,6 +90,8 @@ Q_GLOBAL_STATIC(MacOSNotificationCenterPrivate, macosNotificationCenterPrivate)
     }
 }
 @end
+
+MacOSNotificationCenterPrivate *MacOSNotificationCenterPrivate::m_instance = nullptr;
 
 MacOSNotificationCenterPrivate::MacOSNotificationCenterPrivate()
     : m_internalCounter(0)
@@ -121,6 +119,14 @@ MacOSNotificationCenterPrivate::~MacOSNotificationCenterPrivate()
     }
 }
 
+MacOSNotificationCenterPrivate *MacOSNotificationCenterPrivate::instance() {
+    if (!m_instance) {
+        m_instance = new MacOSNotificationCenterPrivate();
+    }
+    return m_instance;
+}
+
+
 NotifyByMacOSNotificationCenter::NotifyByMacOSNotificationCenter(QObject* parent)
     : KNotificationPlugin(parent)
 {
@@ -140,7 +146,7 @@ void NotifyByMacOSNotificationCenter::notify(KNotification *notification, KNotif
 {
     Q_UNUSED(config);
 
-    int internalId = macosNotificationCenterPrivate.exists() ? macosNotificationCenterPrivate->m_internalCounter++ : 0;
+    int internalId = MacOSNotificationCenterPrivate::instance()->m_internalCounter++;
     NSUserNotification *osxNotification = [[[NSUserNotification alloc] init] autorelease];
     NSString *notificationId = [NSString stringWithFormat: @"%d", notification->id()];
     NSString *internalNotificationId = [NSString stringWithFormat: @"%d", internalId];
@@ -180,14 +186,12 @@ void NotifyByMacOSNotificationCenter::notify(KNotification *notification, KNotif
 
     [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification: osxNotification];
 
-    if (macosNotificationCenterPrivate.exists()) {
-        macosNotificationCenterPrivate->m_notifications.insert(internalId, notification);
-    }
+    MacOSNotificationCenterPrivate::instance()->m_notifications.insert(internalId, notification);
 }
 
 void NotifyByMacOSNotificationCenter::close(KNotification *notification)
 {
-    qCDebug(LOG_KNOTIFICATIONS) << "Test remove notification " << notification->id();
+    qCDebug(LOG_KNOTIFICATIONS) << "Remove notification " << notification->id();
 
     NSArray<NSUserNotification *> *deliveredNotifications = [NSUserNotificationCenter defaultUserNotificationCenter].deliveredNotifications;
     for (NSUserNotification *deliveredNotification in deliveredNotifications) {
@@ -195,9 +199,7 @@ void NotifyByMacOSNotificationCenter::close(KNotification *notification)
             // Remove KNotification in mapping
             int internalId = [deliveredNotification.userInfo[@"id"] intValue];
 
-            if (macosNotificationCenterPrivate.exists()) {
-                macosNotificationCenterPrivate->m_notifications.remove(internalId);
-            }
+            MacOSNotificationCenterPrivate::instance()->m_notifications.remove(internalId);
 
             // Remove NSNotification in notification center
             [[NSUserNotificationCenter defaultUserNotificationCenter] removeDeliveredNotification: deliveredNotification];
