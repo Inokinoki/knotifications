@@ -138,9 +138,7 @@ NotifyByMacOSNotificationCenter::NotifyByMacOSNotificationCenter(QObject* parent
     }
 }
 
-NotifyByMacOSNotificationCenter::~NotifyByMacOSNotificationCenter()
-{
-}
+NotifyByMacOSNotificationCenter::~NotifyByMacOSNotificationCenter() {}
 
 void NotifyByMacOSNotificationCenter::notify(KNotification *notification, KNotifyConfig *config)
 {
@@ -157,7 +155,15 @@ void NotifyByMacOSNotificationCenter::notify(KNotification *notification, KNotif
     osxNotification.userInfo = [NSDictionary dictionaryWithObjectsAndKeys: notificationId, @"id",
         internalNotificationId, @"internalId", nil];
     osxNotification.informativeText = text;
-    osxNotification.contentImage = QtMac::toNSImage(notification->pixmap());
+
+    if (notification->pixmap().isNull()) {
+        QIcon notificationIcon = QIcon::fromTheme(notification->iconName());
+        if (!notificationIcon.isNull()) {
+            osxNotification.contentImage = QtMac::toNSImage(notificationIcon.pixmap(QSize(64, 64)));
+        }
+    } else {
+        osxNotification.contentImage = QtMac::toNSImage(notification->pixmap());
+    }
 
     if (notification->actions().isEmpty()) {
         // Remove all buttons
